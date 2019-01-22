@@ -31,32 +31,45 @@ class YandexData():
     def _load_data(self):
         CUTOFF = 3
         queries_lookup = {}
-        new_item = lambda: {'sessions': [], 'docs': set()}
-        turn2int = lambda x: [int(i) for i in x]
-        # state='Q'
+
+        # Lambda functions
+        new_item = lambda: {'sessions': [], 'docs': set()} 
+        turn2int = lambda x: [int(i) for i in x] 
+        
         with open(self.path, 'r') as f:
             click = []
             last_q = None
+
             for line in f.readlines():
                 vals = re.split(r'\t+', line.rstrip())
+
+                # If line is a query
                 if vals[2] == 'Q':
-                    # state = 'Q'
-                    pres_q = vals[3]
-                    # we only care about the first CUTOFF urls
+                    current_q = vals[3]
+
+                    # Get the relevant URLs
                     cutoff_urls = turn2int(vals[5:5 + CUTOFF])
-                    if pres_q not in queries_lookup.keys():
+
+                    if current_q not in queries_lookup.keys():
                         it = new_item()
                     else:
-                        it = queries_lookup[pres_q]
+                        it = queries_lookup[current_q]
+
+                    # Append documents for this query and add session
                     it['docs'] = it['docs'].union(cutoff_urls)
                     it['sessions'].append({'urls': cutoff_urls, 'clicks': []})
-                    queries_lookup[pres_q] = it
-                    last_q = pres_q
+                    
+                    queries_lookup[current_q] = it
+                    last_q = current_q
+
+                # Else if line is a click
                 elif vals[2] == 'C':
+                    # If the document has been found in the active query, add
+                    # the document to the selection of clicks
                     if int(vals[3]) in queries_lookup[last_q]['sessions'][-1]['urls']:
                         queries_lookup[last_q][
                             'sessions'][-1]['clicks'].append(int(vals[3]))
-                    # state = 'C'
+
         self.queries_lookup = queries_lookup
         return
 
