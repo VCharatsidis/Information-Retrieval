@@ -1,5 +1,9 @@
 # %%
+# Import all dependencies
 import numpy as np
+import random as rd
+import re
+from copy import deepcopy
 
 # %%
 '''
@@ -27,7 +31,7 @@ rankings = simulate_rankings()
 
 # %%
 '''
-$\textbf{Step 2:}$ Calculate the $\Delta$ measure
+### Step 2: Calculate the $\Delta$ measure
 
 We calculate the Expected reciprocal rank of a ranking using the guy 
 
@@ -99,7 +103,7 @@ def calculate_Dmeasures(rankings):
 
 # %%
 '''
-$\textbf{Step 3}$: Implement Team-Draft Interleaving and Probabilistic Intearleaving
+### Step 3: Implement Team-Draft Interleaving and Probabilistic Intearleaving
 
 $\textbf{Team Draft Interleaving}$ is performed by throwing a coin. If its heads we put, in the interleaved list,
 the first document of list A that is not already in and then the first document of list B that is not already in,
@@ -236,7 +240,233 @@ def softmax(rankings, tau = 3):
 
 # %%
 '''
-### Part 5: Simulate Interleaving Experiment
+### Step 4: Implement Click-based models
+'''
+
+# %%
+class YandexData():
+    """
+        The structure of lookup table:
+        {
+            'q_id':{
+                'sessions':[
+                {
+                    'url_ids':[],
+                    'clicks':[]
+                }
+                ]
+                'docs':set([])
+            }
+        }
+
+        @Properties:        
+            - `q_id` is the id of the different queries, key to object:
+                - `session` is a list of the sessions of this particular `q_id`
+                    each `session` have a list of `url_ids` and a `clicks` list, 
+                    the url in `clicks` must be in the `url_ids`
+                - `docs` is the union of all urls returned by the system per query
+    """
+
+    def __init__(self, path):
+        self.path = path
+        self._load_data()
+
+    def _load_data(self):
+        CUTOFF = 3
+        queries_lookup = {}
+
+        # Lambda functions
+        new_item = lambda: {'sessions': [], 'docs': set()} 
+        turn2int = lambda x: [int(i) for i in x] 
+        
+        with open(self.path, 'r') as f:
+            click = []
+            last_q = None
+
+            for line in f.readlines():
+                vals = re.split(r'\t+', line.rstrip())
+
+                # If line is a query
+                if vals[2] == 'Q':
+                    current_q = vals[3]
+
+                    # Get the relevant URLs
+                    cutoff_urls = turn2int(vals[5:5 + CUTOFF])
+
+                    if current_q not in queries_lookup.keys():
+                        it = new_item()
+                    else:
+                        it = queries_lookup[current_q]
+
+                    # Append documents for this query and add session
+                    it['docs'] = it['docs'].union(cutoff_urls)
+                    it['sessions'].append({'urls': cutoff_urls, 'clicks': []})
+                    
+                    queries_lookup[current_q] = it
+                    last_q = current_q
+
+                # Else if line is a click
+                elif vals[2] == 'C':
+                    # If the document has been found in the active query, add
+                    # the document to the selection of clicks
+                    if int(vals[3]) in queries_lookup[last_q]['sessions'][-1]['urls']:
+                        queries_lookup[last_q][
+                            'sessions'][-1]['clicks'].append(int(vals[3]))
+
+        self.queries_lookup = queries_lookup
+
+# %%
+class ClickModel(object):
+    def __init__(self):
+        pass
+    def train(self, data):
+        raise NotImplementedError
+    def get_probs(self, rankings):
+        raise NotImplementedError
+    def is_click(self, rankings, epsilon):
+        """
+        simulate the click, return a boolean list of the same length as `rankings`, True means clicked
+        """
+        probs = self.get_probs(rankings, epsilon)
+        click_fn = lambda p: rd.uniform(0, 1) < p
+        return list(map(click_fn, probs))
+
+# %%
+class PBM(ClickModel):
+    def __init__(self):
+        self.alpha_uq = {}
+        self.gamma_r = [rd.uniform(0, 1) for _ in range(CUTOFF)]
+
+    def train(self, data, T=20, load=False):
+        """ Trains the parameters of the model according to the data.
+
+            @Input:
+                - data: YandexData object, Yandex data
+                - T: integer, time steps of the training loop
+                - load: boolean, whether trained gamma is used (we dont need trained alpha because during inference they are replaced by epsilon)
+        """
+
+        if load:
+            self.gamma_r = [0.9998564405092062,
+                            0.48278049975990095, 0.3335993103977007]
+            return
+
+        self._init_alpha(data)
+
+        for _ in range(T):
+            self._update_alpha(data)
+            self._update_gamma(data)
+
+    def _init_alpha(self, data):
+        """ Initializes alpha on the model to be a dictionary only where (query, doc) have a value
+
+            @Input:
+                - data: YandexData object
+        """
+        for q, it in data.queries_lookup.items():
+            for doc in it['docs']:
+                self.alpha_uq[(q, doc)] = rd.uniform(0, 1)
+
+    def _update_alpha(self, data):
+        """ Performs an update of alpha in EM
+
+            @Input:
+                - data: YandexData object
+        """
+
+        # Get all the sessions and docs belonging to a query.
+        ql = data.queries_lookup
+        new_alpha_uq = deepcopy(self.alpha_uq)
+
+        # Loop through all query-doc combos
+        for (q, u), alpha in self.alpha_uq.items():
+            count = 2
+            contribution_sum = 1
+
+            for sess in ql[q]['sessions']:
+                if u not in sess['urls']:
+                    continue
+
+                count += 1
+                if u in sess['clicks']:
+                    contribution_sum += 1
+                else:
+                    ind = sess['urls'].index(u)
+                    contribution_sum += (1 - self.gamma_r[ind]) * \
+                        alpha / (1 - self.gamma_r[ind] * alpha)
+
+            new_alpha_uq[(q, u)] = contribution_sum / count
+
+        self.alpha_uq = new_alpha_uq
+
+    def _update_gamma(self, data):
+        """ Performs an update of gamma in EM
+
+            @Input:
+                - data: YandexData object
+        """
+
+        ql = data.queries_lookup
+        sess_num = 0
+        contrib_sum = [0] * CUTOFF
+        for q, item in ql.items():
+            sess_num += len(item['sessions'])
+            for sess in item['sessions']:
+                for i, u in enumerate(sess['urls']):
+                    if u in sess['clicks']:
+                        contrib_sum[i] += 1
+                    else:
+                        contrib_sum[i] += self.gamma_r[i] * (1 - self.alpha_uq[q, u]) / (
+                            1 - self.gamma_r[i] * self.alpha_uq[q, u])
+
+        self.gamma_r = [i / sess_num for i in contrib_sum]
+        return
+
+    def get_probs(self, rankings, epsilon=0.1):
+        """
+            assume `rankings` are list of relevance labels
+            use `epsilon` to substitute alpha, typical value is 0.1
+        """
+        def prob_fn(args): return self.gamma_r[
+            args[0]] * (1 - epsilon if args[1] == 1 else epsilon)
+        return list(map(prob_fn, enumerate(rankings)))
+
+# %%
+CUTOFF = 3
+
+class RCM(ClickModel):
+    """
+        Random clicking model
+    """
+
+    def __init__(self):
+        self.gamma = [0] * 3
+
+    def train(self, data, load=True):
+        """
+            get the \rho paramter for random clicking by calculating the fraction of clicked urls among all returned results
+        """
+        if load:
+            self.rho = 0.2802838475726031
+            return
+        sess_num = 0
+        cli_num = 0
+        for q, it in data.queries_lookup.items():
+            for sess in it['sessions']:
+                cli_num += len(sess['clicks'])
+            sess_num += len(it['sessions'])
+        self.rho = cli_num / sess_num / CUTOFF
+        return
+
+    def get_probs(self, rankings, epsilon=None):
+        """
+            return \rho list regardless
+        """
+        return [self.rho] * len(rankings)
+
+# %%
+'''
+### Step 5: Simulate Interleaving Experiment
 '''
 
 # %%
