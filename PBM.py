@@ -1,11 +1,12 @@
 import random as rd
 from copy import deepcopy
 import yandex
+from click_model import ClickModel
 
 CUTOFF=3
 
 
-class PBM(object):
+class PBM(ClickModel):
 
     def __init__(self):
         self.alpha_uq = {}
@@ -91,13 +92,6 @@ class PBM(object):
             args[0]] * (1 - epsilon if args[1] == 1 else epsilon)
         return list(map(prob_fn, enumerate(rankings)))
 
-    def is_click(self, rankings, epsilon):
-        """
-        simulate the click, return a boolean list of the same length as `rankings`, True means clicked
-        """
-        probs = self.get_probs(rankings, epsilon)
-        click_fn = lambda p: rd.uniform(0, 1) < p
-        return list(map(click_fn, probs))
 
 if __name__ == "__main__":
     yd = yandex.YandexData('./YandexRelPredChallenge.txt')

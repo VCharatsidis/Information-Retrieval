@@ -184,11 +184,64 @@ class YandexData():
 
 # %%
 import random as rd
+
+class ClickModel(object):
+
+    def __init__(self):
+        pass
+    def train(self, data):
+        raise NotImplementedError
+    def get_probs(self, rankings):
+        raise NotImplementedError
+    def is_click(self, rankings, epsilon):
+        """
+        simulate the click, return a boolean list of the same length as `rankings`, True means clicked
+        """
+        probs = self.get_probs(rankings, epsilon)
+        click_fn = lambda p: rd.uniform(0, 1) < p
+        return list(map(click_fn, probs))
+
+# %%
+
+
+class RCM(ClickModel):
+    """
+        Random clicking model
+    """
+
+    def __init__(self):
+        self.gamma = [0] * 3
+
+    def train(self, data, load=True):
+        """
+            get the \rho paramter for random clicking by calculating the fraction of clicked urls among all returned results
+        """
+        if load:
+            self.rho = 0.2802838475726031
+            return
+        sess_num = 0
+        cli_num = 0
+        for q, it in data.queries_lookup.items():
+            for sess in it['sessions']:
+                cli_num += len(sess['clicks'])
+            sess_num += len(it['sessions'])
+        self.rho = cli_num / sess_num / CUTOFF
+        return
+
+    def get_probs(self, rankings, epsilon=None):
+        """
+            return \rho list regardless
+        """
+        return [self.rho] * len(rankings)
+
+
+# %%
 from copy import deepcopy
 
-
-class PBM(object):
-
+class PBM(ClickModel):
+    """
+        Position based clicking model
+    """
     def __init__(self):
         self.alpha_uq = {}
         self.gamma_r = [rd.uniform(0, 1) for _ in range(CUTOFF)]
@@ -273,10 +326,3 @@ class PBM(object):
             args[0]] * (1 - epsilon if args[1] == 1 else epsilon)
         return list(map(prob_fn, enumerate(rankings)))
 
-    def is_click(self, rankings, epsilon):
-        """
-        simulate the click, return a boolean list of the same length as `rankings`, True means clicked
-        """
-        probs = self.get_probs(rankings, epsilon)
-        click_fn = lambda p: rd.uniform(0, 1) < p
-        return list(map(click_fn, probs))
