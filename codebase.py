@@ -4,99 +4,167 @@ import numpy as np
 
 
 # %%
+'''
+
+'''
+
+# %%
+
 
 def simulate_rankings():
-    P = [[0, 0, 0], [1, 0, 0], [1, 1, 0], [1, 1, 1], [1, 0, 1], [0, 1, 1], [0, 0, 1], [0, 1, 0]]
-    E = [[0, 0, 0], [1, 0, 0], [1, 1, 0], [1, 1, 1], [1, 0, 1], [0, 1, 1], [0, 0, 1], [0, 1, 0]]
+    ''' This method creates all possible combinations of rankings for P and E.
+    
+        @Output: a list of tuples. A tuple has 2 integer arrays (one ranking for P and one for E).
+    '''
+    P = [[0, 0, 0], [1, 0, 0], [1, 1, 0], [1, 1, 1],
+         [1, 0, 1], [0, 1, 1], [0, 0, 1], [0, 1, 0]]
+    E = [[0, 0, 0], [1, 0, 0], [1, 1, 0], [1, 1, 1],
+         [1, 0, 1], [0, 1, 1], [0, 0, 1], [0, 1, 0]]
     rankings = []
     for p in P:
         for e in E:
             tup1 = (p, e)
             rankings.append(tup1)
-    
+
     print(rankings)
     return rankings
-    
+
 rankings = simulate_rankings()
 
 # %%
+
+
 def calculate_ERR(ranking):
+    ''' This method calculates the ERR of a ranking. A ranking is a one dimensional interger list with length 3.
+    
+        @Input: a one dimensional list of length 3 with zeros and ones.
+        
+        @Output: a double (ERR score).
+    '''
     ERR = 0
     for r in range(len(ranking)):
-        prob_to_stop_at_r = ranking[r]/(r+1)
+        prob_to_stop_at_r = ranking[r] / (r + 1)
         for i in range(r):
             prob_to_stop_at_r *= 1 - ranking[i]
-            
+
         ERR += prob_to_stop_at_r
-        
+
     return ERR
-        
+
 calculate_ERR(rankings[1][1])
 
 # %%
+
+
 def calculate_Dmeasures(rankings):
+    ''' This method calculates the difference in ERR between the two rankings of every tuple, 
+        for all tuples of rankings.
+        Since we need to store the results in 10 different buckets we use a dictionary with keys 10 integers 
+        from 0 to 9 with step 1 and values the list of our measurements.
     
-    measures = {k:[] for k in range(10)}
+        @Input: a list of tuples.
+        
+        @Output: A dictionary with keys integers from 0 to 9 and values 10 lists of doubles. 
+        
+    '''
+
+    measures = {k: [] for k in range(10)}
     for index, r in enumerate(rankings):
         ERR_P = calculate_ERR(r[0])
         ERR_E = calculate_ERR(r[1])
-        
+
         d_measure = ERR_E - ERR_P
-        
+
         if d_measure >= 0.05 and d_measure <= 0.95:
             measures[int(d_measure * 10)].append(index)
-            
-    
+
     return measures
 
 measures = calculate_Dmeasures(rankings)
 print(measures)
 
 # %%
+
+
 def team_draft_interleaving(list_a, list_b):
+    ''' Team draft interleaving performed by throwing a coin. If its heads we put in the interleaved list
+        the first element of list A that is not already in,
+        if its tails we put in the interleaved list the first element of list B that is not already in.
+        
+        @Input: 2 lists of intergers of length 3.
+        
+        @Output: an interleaved list of tuples of length 3. Each tuple contain an integer (document ID) and a 0 or 1 
+        depending of which list it came from.
     
-    interleaved_list = [ ]
+    '''
+
+    interleaved_list = []
     counter = 0
     while counter < 3:
         coin_toss = random.random()
-                   
+
         if(coin_toss > 0.5):
             put_first_available_url_in_interleaved(list_a, 0, interleaved_list)
             counter += 1
             if(counter == 2):
                 return interleaved_list
-            
-            put_first_available_url_in_interleaved(list_b, 1, interleaved_list)  
+
+            put_first_available_url_in_interleaved(list_b, 1, interleaved_list)
             counter += 1
         else:
             put_first_available_url_in_interleaved(list_b, 1, interleaved_list)
             counter += 1
             if(counter == 2):
                 return interleaved_list
-            
+
             put_first_available_url_in_interleaved(list_a, 0, interleaved_list)
             counter += 1
-            
+
     return interleaved_list
 
-    
+
 def put_first_available_url_in_interleaved(a_list, index_list, interleaved_list):
+    ''' Helper method that creates a tuple with and integer (document ID) and 
+        a 0 or 1 which indicates from which list it came from and adds it in the interleaved list. 
+        
+        @Input: - a list of intergers of length 3.
+                - a 0 or 1 indicator of the list.
+                - the interleaved list with all tuples of rnakings.
+         
+    '''
     for i in a_list:
-        if i not in interleaved_list:
+        already_in_interleaved = False
+        for tupl in interleaved_list:
+            if tupl[0] == i:
+                already_in_interleaved = True
+
+        if i not already_in_interleaved:
             tup = (i, index_list)
             intearleaved_list.append(tup)
             return
-  
 
 
 # %%
 def probabilistic_interleaving(list_a, list_b):
-    interleaved_list = [ ]
-    counter = 0
+    ''' Probabilistic interleaving perfromed by throwing coins, if its heads we use the softmax function of list A
+        to choose randomly (with higher probability the more relevant rankings)
+        else we use the softmax function of list B. 
+        After we put the choosen doc we remove it from both lists A and B softmaxes.
+        We do this until the interleaved list is full.
+        The interleaved list contains tuples with the document ID and a 0 or 1 considering the list that it came from.
+        
+        @Input: 2 lists of intergers of length 3.
+        
+        @Output: an interleaved list of tuples of length 3. Each tuple contain an integer (document ID) and a 0 or 1 
+        depending of which list it came from.
     
+    '''
+    interleaved_list = []
+    counter = 0
+
     while counter < 3:
         coin_toss = random.random()
-                   
+
         if(coin_toss > 0.5):
             probs = softmax(list_a)
             chosen = np.random.choice(list_a, probs)
@@ -109,17 +177,26 @@ def probabilistic_interleaving(list_a, list_b):
             list_b.remove(chosen)
             list_a.remove(chosen)
             counter += 1
-           
-            
+
     return interleaved_list
+
+
+def softmax(rankings, tau=3):
+    ''' Helper method that calculates the probabilities of every document in the given list
+        using the softmax function in a vectorised from.
+        
+        @Input: list of intergers of length 3 (rankings).
+        
+        @Output: a vector with probabilities for every document.
     
-    
-def softmax(rankings, tau = 3):
+    '''
     numerators = 1 / np.power(rankings, tau)
     denominator = numerators.sum()
-    
+
     return numerators / denominator
-    
+
+
+# %%
 
 # %%
 import re

@@ -13,20 +13,17 @@ class PBM(ClickModel):
         self.gamma_r = [rd.uniform(0, 1) for _ in range(CUTOFF)]
 
     def train(self, data, T=20, load=False):
-        """ Trains the parameters according to data.
-
-            @Input:
-                - data: yandex data
-                - T: time steps of the training loop
-                - load: whether use the trained gamma(we dont need trained alpha because during inference they are replaced by epsilon).
+        """
+            train the parameter according to data
+            data: yandex data
+            T: time steps of the training loop
+            load: whether use the trained gamma(we dont need trained alpha because during inference they are replaced by epsilon)
         """
         if load:
             self.gamma_r = [0.9998564405092062,
                             0.48278049975990095, 0.3335993103977007]
             return
-
         self._init_alpha(data)
-        
         for _ in range(T):
             self._update_alpha(data)
             self._update_gamma(data)
