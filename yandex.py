@@ -29,7 +29,6 @@ class YandexData():
         self._load_data()
 
     def _load_data(self):
-
         CUTOFF = 3
         queries_lookup = {}
         new_item = lambda: {'sessions': [], 'docs': set()}
