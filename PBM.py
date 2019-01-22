@@ -13,37 +13,44 @@ class PBM(ClickModel):
         self.gamma_r = [rd.uniform(0, 1) for _ in range(CUTOFF)]
 
     def train(self, data, T=20, load=False):
-        """
-            train the parameter according to data
-            data: yandex data
-            T: time steps of the training loop
-            load: whether use the trained gamma(we dont need trained alpha because during inference they are replaced by epsilon)
+        """ Trains the parameters of the model according to the data.
+
+            @Input:
+                - data: YandexData object, Yandex data
+                - T: integer, time steps of the training loop
+                - load: boolean, whether trained gamma is used (we dont need trained alpha because during inference they are replaced by epsilon)
         """
         if load:
             self.gamma_r = [0.9998564405092062,
                             0.48278049975990095, 0.3335993103977007]
             return
+
         self._init_alpha(data)
+
         for _ in range(T):
             self._update_alpha(data)
             self._update_gamma(data)
 
     def _init_alpha(self, data):
-        """
-        init the alpha to be a dict where only the present (query, doc) pairs have value
+        """ Initializes alpha on the model to be a dictionary only where (query, doc) have a value
+
+            @Input:
+                - data: YandexData object
         """
         for q, it in data.queries_lookup.items():
             for doc in it['docs']:
                 self.alpha_uq[(q, doc)] = rd.uniform(0, 1)
 
     def _update_alpha(self, data):
-        """
-        data is the yandex data.
-        This function performs an update of alpha in EM
+        """ Performs an update of alpha in EM
+
+            @Input:
+                - data: YandexData object
         """
 
         ql = data.queries_lookup
         new_alpha_uq = deepcopy(self.alpha_uq)
+
         for (q, u), alpha in self.alpha_uq.items():
             count = 2
             contribution_sum = 1
@@ -58,13 +65,14 @@ class PBM(ClickModel):
                     contribution_sum += (1 - self.gamma_r[ind]) * \
                         alpha / (1 - self.gamma_r[ind] * alpha)
             new_alpha_uq[(q, u)] = contribution_sum / count
+
         self.alpha_uq = new_alpha_uq
-        return
 
     def _update_gamma(self, data):
-        """
-        data is the yandex data.
-        This function performs an update of gamma in EM
+        """ Performs an update of gamma in EM
+
+            @Input:
+                - data: YandexData object
         """
 
         ql = data.queries_lookup

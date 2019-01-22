@@ -21,6 +21,7 @@ def simulate_rankings():
     E = [[0, 0, 0], [1, 0, 0], [1, 1, 0], [1, 1, 1],
          [1, 0, 1], [0, 1, 1], [0, 0, 1], [0, 1, 0]]
     rankings = []
+
     for p in P:
         for e in E:
             tup1 = (p, e)
@@ -402,4 +403,3 @@ class PBM(ClickModel):
         prob_fn = lambda args: self.gamma_r[
             args[0]] * (1 - epsilon if args[1] == 1 else epsilon)
         return list(map(prob_fn, enumerate(rankings)))
-

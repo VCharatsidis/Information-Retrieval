@@ -2,13 +2,7 @@ import re
 
 
 class YandexData():
-
-    def __init__(self, path):
-        self.path = path
-        self._load_data()
-
-    def _load_data(self):
-        """
+    """
         The structure of lookup table:
         {
             'q_id':{
@@ -21,11 +15,21 @@ class YandexData():
                 'docs':set([])
             }
         }
-        `q_id` is the id of the different queries
-        `session` is a list of the sessions of this particular `q_id`
-        each `session` have a list of `url_ids` and a `clicks` list, the url in `clicks` must be in the `url_ids`
-        `docs` is the union of all urls returned by the system per query
-        """
+
+        @Properties:        
+            - `q_id` is the id of the different queries, key to object:
+                - `session` is a list of the sessions of this particular `q_id`
+                    each `session` have a list of `url_ids` and a `clicks` list, 
+                    the url in `clicks` must be in the `url_ids`
+                - `docs` is the union of all urls returned by the system per query
+    """
+
+    def __init__(self, path):
+        self.path = path
+        self._load_data()
+
+    def _load_data(self):
+
         CUTOFF = 3
         queries_lookup = {}
         new_item = lambda: {'sessions': [], 'docs': set()}
