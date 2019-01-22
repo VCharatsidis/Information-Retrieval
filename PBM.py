@@ -20,6 +20,7 @@ class PBM(ClickModel):
                 - T: integer, time steps of the training loop
                 - load: boolean, whether trained gamma is used (we dont need trained alpha because during inference they are replaced by epsilon)
         """
+        
         if load:
             self.gamma_r = [0.9998564405092062,
                             0.48278049975990095, 0.3335993103977007]

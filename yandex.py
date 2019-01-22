@@ -71,8 +71,6 @@ class YandexData():
                             'sessions'][-1]['clicks'].append(int(vals[3]))
 
         self.queries_lookup = queries_lookup
-        return
-
 
 if __name__ == "__main__":
     yd = YandexData('./YandexRelPredChallenge.txt')
