@@ -1,17 +1,12 @@
 # %%
-
 import numpy as np
 
-
-
 # %%
 '''
-$\textbf{Step 1:}$ Simulate Rankings of Relevance for E and P
+### Step 1: Simulate Rankings of Relevance for E and P
 '''
 
 # %%
-
-
 def simulate_rankings():
     ''' This method creates all possible combinations of rankings for P and E.
     
@@ -66,15 +61,15 @@ def calculate_ERR(ranking):
         ERR += prob_to_stop_at_r
         
     return ERR
-        
-calculate_ERR(rankings[1][1])
+
+calculate_ERR(rankings[5][1])
+# rankings[5][1]
 
 # %%
 '''
 Then we calculate the $\Delta $measures and split them in 10 buckets.
 
 The buckets are made such that group 1 contains all pairs for which 0.05 < $\Delta$ measure ≤ 0.1, group 2 all pairs for which 0.1 < $\Delta$measure ≤ 0.2, etc.
-
 '''
 
 # %%
@@ -89,8 +84,8 @@ def calculate_Dmeasures(rankings):
         @Output: A dictionary with keys integers from 0 to 9 and values 10 lists of doubles. 
         
     '''
-    
     measures = {k:[] for k in range(10)}
+    
     for index, r in enumerate(rankings):
         ERR_P = calculate_ERR(r[0])
         ERR_E = calculate_ERR(r[1])
@@ -100,11 +95,7 @@ def calculate_Dmeasures(rankings):
         if d_measure >= 0.05 and d_measure <= 0.95:
             measures[int(d_measure * 10)].append(index)
             
-    
     return measures
-
-measures = calculate_Dmeasures(rankings)
-print(measures)
 
 # %%
 '''
@@ -130,9 +121,9 @@ def team_draft_interleaving(list_a, list_b):
         depending of which list it came from.
     
     '''
-    
     interleaved_list = [ ]
     counter = 0
+    
     while counter < 3:
         coin_toss = random.random()
                    
@@ -155,7 +146,6 @@ def team_draft_interleaving(list_a, list_b):
             
     return interleaved_list
 
-    
 def put_first_available_url_in_interleaved(a_list, index_list, interleaved_list):
     ''' Helper method that creates a tuple with and integer (document ID) and 
         a 0 or 1 which indicates from which list it came from and adds it in the interleaved list. 
@@ -171,7 +161,7 @@ def put_first_available_url_in_interleaved(a_list, index_list, interleaved_list)
             if tupl[0] == i:
                 already_in_interleaved = True
                 
-        if i not already_in_interleaved:
+        if i not in already_in_interleaved:
             tup = (i, index_list)
             intearleaved_list.append(tup)
             return
@@ -226,8 +216,7 @@ def probabilistic_interleaving(list_a, list_b):
             list_b.remove(chosen)
             list_a.remove(chosen)
             counter += 1
-           
-            
+
     return interleaved_list
     
     
@@ -238,7 +227,6 @@ def softmax(rankings, tau = 3):
         @Input: list of intergers of length 3 (rankings).
         
         @Output: a vector with probabilities for every document.
-    
     '''
     numerators = 1 / np.power(rankings, tau)
     denominator = numerators.sum()
@@ -247,6 +235,19 @@ def softmax(rankings, tau = 3):
     
 
 # %%
-
+'''
+### Part 5: Simulate Interleaving Experiment
+'''
 
 # %%
+def run_interleave_experiments(k):
+    for exp in interleave_experiments:
+        results = []a
+        for i in range(k):
+            click_results_E, click_results_P = get_click_results()
+            
+            if click_results_E > click_results_P:
+                results.append(click_results_E)
+                
+#                 ? What do to with these res
+    return
