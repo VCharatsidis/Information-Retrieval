@@ -315,11 +315,6 @@ def probabilistic_interleaving(list_a, list_b):
             
     return interleaved_list
 
-def softmax(a_list, tau=3):
-    ''' Helper method that calculates the probabilities of every document in the given list
-        using the softmax function in a vectorised from.'''
-
-    return interleaved_list
 
 def interleave(list_a, list_b, interleave_fn=team_draft_interleaving, max_docs=20):
     labeled_a, labeled_b = convert_lists_to_labeled(list_a, list_b, max_docs)
