@@ -595,8 +595,6 @@ model_RCM = RCM()
 model_RCM.train(yd, True)
 
 # %%
-
-
 def simulate_experiment(rankingA, rankingB, model, interleave_fn=team_draft_interleaving, k=100):
     E_wins = 0
     P_wins = 0
@@ -630,8 +628,6 @@ def simulate_experiment(rankingA, rankingB, model, interleave_fn=team_draft_inte
 '''
 
 # %%
-
-
 def calc_sample_size(p_val, alpha=0.05, beta=0.10, p_null=0.5):
     z = norm.ppf(1-alpha)*math.sqrt(p_null * (1 - p_null)) + \
         norm.ppf(1-beta) * math.sqrt(p_val * (1-p_val))
@@ -693,7 +689,6 @@ table = calc_sample_size_for_bins(interleave_fn=probabilistic_interleaving)
 
 # %%
 int_methods = [team_draft_interleaving, probabilistic_interleaving]
-
 
 def run_all_setups(models=[model_PBM, model_RCM], methods=[team_draft_interleaving, probabilistic_interleaving]):
     for model in models:
