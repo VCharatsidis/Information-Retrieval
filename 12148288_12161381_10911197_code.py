@@ -541,7 +541,7 @@ class RCM(ClickModel):
 '''
 With the click models developed, it will be possible to simulate an online experiment. The general flow will start with initializing a click model, and training it to learn the gamma values (for PBM) or the rho (for RCM). For PBM, epsilon values will be used as alpha proxy. The data from Yandex will be used to train the models using Expectation Maximization. These models will then serve in the online experiments to simulate clicks.
 
-The goal is to run a number of `k` competitions of our rankers E and P. For each competition, their rankings will be interleaved, and according to the used model, clicks for their rankings will be simulated. The ranker with the largest number of clicks win the round. This is repeated k times, after which the number of times E wins out of all victory games is used as the main proportion.
+The goal is to run a number of `k` competitions of our rankers E and P. For each competition, their rankings will be interleaved, and according to the used model, clicks for their rankings will be simulated. The ranker with the largest number of clicks win the round. This is repeated k times, after which the number of times E wins out of all victory games is used as the main proportion. Draws are however, ignored and not used. This is a core assumption in this paper, and is prone to change upon feedback.
 '''
 
 # %%
@@ -692,7 +692,7 @@ def calc_sample_size_for_bin(binned_el, interleave_fn, model):
 
 # %%
 '''
-With the online and offline analysi, it should now be possible to run each model and interleaving technique and examine the results.
+With the online and offline analysi, it should now be possible to run each model and interleaving technique and examine the results. Due to the high varying nature of these methods, each of the model-technique pairs will be plotted 4 times to show the variance, along with the table to show each bin along with its required sample size.
 '''
 
 # %%
@@ -771,3 +771,19 @@ Similar to team-draft interleaving, there does not seem to be any particular pre
 '''
 
 # %%
+'''
+###  Conclusion and Discussion
+'''
+
+# %%
+'''
+In this experiment, the main goal was to model click-behaviour and use these models to infer a minimal number of samples required to prove statistical significance of model improvement online. The rankings are received from offline-evaluated grouped data, in which the difference in Expected Reciprocal Rank was used as group-measure and effect size. Using this effect size, we could see if these bins could correlate with online-based effect sizes, such as proportion of wins of one model over another. This is done using interleaving techniques, team-draft and probabilistic. After running both a Position-based click-model (PBM) through these interleaved results and a Random-click model (RCM, it was possible to see a number of effects.
+* PBM displays strong correlations for sample sizes and bins with both probabilistic interleaving and team draft interleaving. It is possible to see a decline in the results as the effect-size increases, which means that the larger the effect-size, the less samples are necesseray to prove this for statistical significance. This corresponds to the intuition of power analysis, as can be read in the paper "Power Analysis for Interleaving Experiments by means of Ofﬂine Evaluation" by Hosein Azarbonyad and professor Evangelos Kanoulas
+*  The difference between probabilistic interleaving and team-draft interleaving is that probabilistic seems to have a more drastic change when the \delta M increases, while team-draft interleaving have the mass distributed more evenly. Besides, the minimum impression number needed in probabilistic interleaving case stays close to minimal throughout all \delta M.
+* Under RBM model, the results seem to be random. The results show a large varience both within the bins and among different \delta M. This reflects the natural difference between PBM and RBM, in that click-based models are indeed more capable in relating actual user-based information to offline-based evaluation techniques. 
+'''
+
+# %%
+'''
+
+'''
