@@ -494,17 +494,10 @@ model_RCM = RCM()
 model_RCM.train(yd, True)
 
 # %%
-yd.queries_lookup['4']
-
-# %%
 for i, bin_val in calculate_Dmeasures(rankings).items():
     for pair_idx in bin_val:
         couple = rankings[pair_idx]
         team_draft_interleaving(couple[0], couple[1])
-
-# %%
-def simulate_click(interleaved_ranking, model):
-    print(interleaved_ranking)
 
 # %%
 def simulate_experiment(rankingA, rankingB, model, interleave_fn=team_draft_interleaving, k=100):
@@ -533,4 +526,4 @@ def simulate_experiment(rankingA, rankingB, model, interleave_fn=team_draft_inte
     
     return (E_wins + 1) / (E_wins + P_wins + 1)
 
-simulate_experiment(rankings[6][0], rankings[6][1], model_PBM)
+# %%
