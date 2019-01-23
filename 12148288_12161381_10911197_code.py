@@ -638,4 +638,3 @@ def run_all_setups(models=[model_PBM, model_RCM], methods=[team_draft_interleavi
 # %%
 run_all_setups()
 
-# %%
