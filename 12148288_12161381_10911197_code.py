@@ -8,6 +8,7 @@ import re
 from scipy.stats import norm
 from copy import deepcopy
 import matplotlib.pyplot as plt
+%matplotlib inline
 
 # %%
 '''
@@ -53,8 +54,6 @@ where $R_i = \frac{2^g - 1}{2^{g_{max}}}$ where $g_i$ is the grade of the i-th d
 '''
 
 # %%
-
-
 def calculate_ERR(ranking):
     ''' This method calculates the ERR of a ranking. A ranking is a one dimensional interger list with length 3.
 
@@ -72,18 +71,12 @@ def calculate_ERR(ranking):
 
     return ERR
 
-
-calculate_ERR(rankings[5][1])
-# rankings[5][1]
-
 # %%
 '''
 The buckets are made such that group 1 contains all pairs for which 0.05 < $\Delta$ measure ≤ 0.1, group 2 all pairs for which 0.1 < $\Delta$measure ≤ 0.2, etc.
 '''
 
 # %%
-
-
 def calculate_Dmeasures(rankings):
     ''' This method calculates the difference in ERR between the two rankings of every tuple, 
         for all tuples of rankings.
@@ -93,7 +86,6 @@ def calculate_Dmeasures(rankings):
         @Input: a list of tuples.
 
         @Output: A dictionary with keys integers from 0 to 9 and values 10 lists of doubles. 
-
     '''
     measures = {k: [] for k in range(10)}
 
@@ -110,18 +102,14 @@ def calculate_Dmeasures(rankings):
 
 
 # %%
-print(calculate_Dmeasures(rankings))
-
-# %%
 '''
 ### Step 3: Implement Team-Draft Interleaving and Probabilistic Intearleaving
 '''
 
 # %%
-# from IPython.core.debugger import set_trace
-
-
 def convert_lists_to_labeled(list_a, list_b):
+    ''' Give the ranking lists of documents
+    '''
     considered_lists = [deepcopy(list_a), deepcopy(list_b)]
     label_results = []
     # set_trace()
@@ -274,12 +262,46 @@ def softmax(a_list, tau=3):
 
 # %%
 '''
+
 ### Step 4: Implement Click-based models
 '''
 
 # %%
+'''
+
+#### Position Based Model} (PBM) is expressed with the equations bellow:
+
+$P(E_{r_u} = 1) = \gamma_{r_u}$
+
+$P(A_u = 1) = \alpha_{uq}$
+
+$P(C_u =1) = P(E_{r_u} = 1) \cdot P(A_u = 1)$
 
 
+The parameters of PBM can be estimated based on the Expectation-Maximization (EM) method:
+
+  * Set parameters to some initial values
+  * Repeat until convergence:
+      * E-step: derive the expectation of the likelihood function.
+      * M-step: maximize this expectation.
+
+
+We update the attractiveness with the formula:
+
+$\alpha^{(t+1)} =  \frac{1}{|S_{uq}|} \sum_{s\in S_{uq}}\bigg(c^{(s)}_{u} +(1 - c^{(s)}_{u}) \frac{(1 - \gamma^{(t)}_r) \alpha^{(t)}_{uq}}{1 -\gamma^{(t)}_r \alpha^{(t)}_{uq}} \bigg)$
+
+and the examination with the formula:
+
+$\gamma^{(t+1)}_r = \frac{1}{|S|} \sum_{s\in S_{uq}}\bigg(c^{(s)}_{u} + (1 - c^{(s)}_{u}) \frac{( \gamma^{(t)}_r)(1 - \alpha^{(t)}_{uq})}{1 -\gamma^{(t)}_r \alpha^{(t)}_{uq}} \bigg)$
+
+#### Random Click Model}(RCM) is expressed with the equation bellow:
+
+$P(C_u =1) = const = \rho$
+
+Where $E_r$ stands for Examination which is a binary random variable denoting examination of a snippet at rank r. $A_u$ stands for Attractiveness (a user wants to click on a document after examining its snippet) and is also a binary random variable showing whether document u is attractive to user, given query q. Finally $C_u$ again a binary random variable denoting a click on document u.
+'''
+
+# %%
 class YandexData():
     """
         The structure of lookup table:
@@ -516,6 +538,13 @@ class RCM(ClickModel):
 '''
 
 # %%
+'''
+With the click models developed, it will be possible to simulate an online experiment. The general flow will start with initializing a click model, and training it to learn the gamma values (for PBM) or the rho (for RCM). For PBM, epsilon values will be used as alpha proxy. The data from Yandex will be used to train the models using Expectation Maximization. These models will then serve in the online experiments to simulate clicks.
+
+The goal is to run a number of `k` competitions of our rankers E and P. For each competition, their rankings will be interleaved, and according to the used model, clicks for their rankings will be simulated. The ranker with the largest number of clicks win the round. This is repeated k times, after which the number of times E wins out of all victory games is used as the main proportion.
+'''
+
+# %%
 # Import the appropriate data
 yd = YandexData('./YandexRelPredChallenge.txt')
 
@@ -526,15 +555,20 @@ model_RCM = RCM()
 model_RCM.train(yd, True)
 
 # %%
-for i, bin_val in calculate_Dmeasures(rankings).items():
-    for pair_idx in bin_val:
-        couple = rankings[pair_idx]
-        team_draft_interleaving(couple[0], couple[1])
-
-# %%
-
-
 def simulate_experiment(rankingA, rankingB, model, interleave_fn=team_draft_interleaving, k=100):
+    ''' Simulate an online experiment using a given `interleave_fn`, click `model`, and two lists.
+    
+        @Input:
+            - rankingA: a list of relevance labels
+            - rankingB: a list of relevance labels
+            - model: a click model, like PBM and RCM
+            - interleave_fn: an interleave function, like team-draft and probabilsitic
+            - k: number of times to put two ranker-lists against another
+            
+        @Output:
+            - Proportion of wins of E vs P
+    '''
+    
     E_wins = 0
     P_wins = 0
 
@@ -567,7 +601,25 @@ def simulate_experiment(rankingA, rankingB, model, interleave_fn=team_draft_inte
 '''
 
 # %%
+'''
+We allow a chance of falsely rejecting the null hypothesis (i.e. concluding that E is better than P, when it is not) of 5\% and a chance of falsely not rejecting the null hypothesis (i.e. not concluding that E is better than P, when it is) of 10\%.
+
+We use the proportion p of wins for E against P for determining the number of required impressions using the proportion test. Assuming that the sampling distribution for proportions can be approximated by a normal distribution we use the following equation to compute the minimum sample size.
+
+$N' \geq \bigg( \frac{z_1-\alpha \sqrt{p_0(1-p_0)} +z_1 -\beta \sqrt{p_1(1-p_1)}}{\delta} \bigg)^2 $
+
+where $p_0 = 0.5$ since each system wins 50\% of the times and $p_1$ is the proportion of times E wins over P out of k simulations. $\alpha$ and $\beta$ specify the level of significance. We set $\alpha = 0.05$ , $\beta = 0.1$ , $\delta = |p_0 -p_1|$ and z is the standard normal distribution.
+
+Finally, using the continuity correction the minimum sample size is determined as $N = N' + \frac{1}{\delta}$.
+'''
+
+# %%
 def calc_sample_size(p_val, alpha=0.05, beta=0.10, p_null=0.5):
+    ''' Calculate the sample size given a p-val according to a one-tailed statistical test.
+    
+        @Input:
+            -p_val: a p-value used to calculate an N high enough for statistical significance.
+    '''
     z = norm.ppf(1-alpha)*math.sqrt(p_null * (1 - p_null)) + \
         norm.ppf(1-beta) * math.sqrt(p_val * (1-p_val))
 
@@ -580,20 +632,39 @@ def calc_sample_size(p_val, alpha=0.05, beta=0.10, p_null=0.5):
     return ((z/(abs(p_val-p_null)))**2) + 1/abs(p_val-p_null)
 
 def calc_sample_size_for_bins(interleave_fn=team_draft_interleaving, model=model_PBM, rankings=rankings):
+    ''' Given an interleaving technique, model and simulated rankings, calculate the bins according to the offline
+        evaluation (Δ M), and then calculate the sample size for each bin. Each sample size will be represented by 
+        the min, median and maximum.
+        
+        @Output: a table with all the minimum, maximum and median sample size required.
+    '''
+    
     bins = calculate_Dmeasures(rankings)
     bin_vals = list(bins.keys())
-    table = pd.DataFrame(index=bin_vals,columns=['minimum', 'mean', 'maximum'])    
+    table = pd.DataFrame(index=bin_vals,columns=['minimum', 'median', 'maximum'])    
 
     for bin_key, bin_el in bins.items():
-        minimum, mean, maximum = calc_sample_size_for_bin(bin_el, interleave_fn, model)
+        minimum, median, maximum = calc_sample_size_for_bin(bin_el, interleave_fn, model)
         table.loc[bin_key]['minimum'] = minimum
-        table.loc[bin_key]['mean'] = mean
+        table.loc[bin_key]['median'] = median
         table.loc[bin_key]['maximum'] = maximum
     
     return table
 
 
 def calc_sample_size_for_bin(binned_el, interleave_fn, model):
+    ''' Given a particular bin, calculate the sample size needed to calculate a statistical significant appearance of the
+        effect size implicated by the underlying bin. 
+        
+        @Input:
+            - binned_el: a grouping of pairs based on offline evaluation effect sizes.
+            - interleave_fn: interleave function
+            - model: click-based model
+            
+        @Output:
+            - A tuple of minimum, median and maximum of required sample size
+    '''
+    
     result = []
 
     for pair in binned_el:
@@ -608,14 +679,11 @@ def calc_sample_size_for_bin(binned_el, interleave_fn, model):
     if len(binned_el) > 0:
         maximum = np.max(result)
         minimum = np.min(result)
-        mean = np.mean(result)
+        median = np.median(result)
 
-        return (minimum, mean, maximum)
+        return (minimum, median, maximum)
     
     return math.inf, math.inf, math.inf
-        
-
-
 
 # %%
 '''
@@ -623,29 +691,83 @@ def calc_sample_size_for_bin(binned_el, interleave_fn, model):
 '''
 
 # %%
-int_methods = [team_draft_interleaving, probabilistic_interleaving]
+'''
+With the online and offline analysi, it should now be possible to run each model and interleaving technique and examine the results.
+'''
 
+# %%
+def run_setup(model, method):
+    ''' Given a model and method, calculate sample size for bins of the simulated rankings calculated during step 1.
+    
+        - Print table displaying the minium, median and maximum
+        - Plot each of the resulting bins along with their required sample size 4 times to show variance.
+    '''
+    table_setup = calc_sample_size_for_bins(interleave_fn=method, model=model)
+    fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(15,15))
+    fig.suptitle('4 sample runs of {}_{}'.format(model.__class__.__name__, method.__name__))
+    plot_title = '{}_{}'.format(model.__class__.__name__, method.__name__)
+    
+    print(table_setup)
+    
+    for i, ax in enumerate(axes.flatten()):    
+        table_setup.plot.bar(title=plot_title, ax=ax)
+        table_setup = calc_sample_size_for_bins(interleave_fn=method, model=model)
+    
 def run_all_setups(models=[model_PBM, model_RCM], methods=[team_draft_interleaving, probabilistic_interleaving]):
     for model in models:
         for method in methods:
-            table_setup = calc_sample_size_for_bins(interleave_fn=method, model=model)
-            # TODO: What should we do?
-            print(table_setup)
-            plot_title = '{}_{}'.format(model.__class__.__name__, method.__name__)
-            table_setup.plot.bar(title=plot_title)
-
-# In[73]:
-
-
-list_a = [3, 1, 5]
-list_b = [1, 2, 10]
-
-probs = softmax(list_a)
-print(probs)
-res = np.random.choice(list_a, 1, p = probs)
-print(res)
-interleaved = probabilistic_interleaving(list_a, list_b)
-print(interleaved)
+            run_setup(model, method)
 
 # %%
-run_all_setups()
+'''
+#### Team-draft PBM 
+'''
+
+# %%
+run_setup(model_PBM, team_draft_interleaving)
+
+# %%
+'''
+On average, the PBM team-draft shows a strong tendency to decrease along with the x-axis of the above plot. Most strongly, this can be found reflected in all of the dercreasing statistics (median, minimum and maximum). While an outlier might skew the results to seem less descending, as the maximum and minimum reach a strong decrease after approximately bin 2, it can be inferred that the larger the effect size is in ΔM, and as the proportional difference in victories increases, so does the required number of sample size decrease.
+'''
+
+# %%
+'''
+#### Probabilistic Interleaving PBM
+'''
+
+# %%
+run_setup(model_PBM, probabilistic_interleaving)
+
+# %%
+'''
+Similar to team-draft, probabilistic interleaving shows an almost smooth descent in sample size needed, except the bins with the smallest effect size (leftmost on the axis) on average display lower rankings and thus, the difference between the bins seem less extreme initially. The differences become less extreme, resembling those of the team-draft PBM.
+'''
+
+# %%
+'''
+#### Team-draft RCM
+'''
+
+# %%
+run_setup(model_RCM, team_draft_interleaving) 
+
+# %%
+'''
+On average, the results seem to be wildly variant for RCM, for each bin. No correlation can be calculated between bins and required samples, and no bin is preferred. As such, no correlation can be estimated.
+'''
+
+# %%
+'''
+#### Probabilistic Interleaving RCM
+'''
+
+# %%
+run_setup(model_RCM, probabilistic_interleaving)
+
+# %%
+'''
+Similar to team-draft interleaving, there does not seem to be any particular preference for bin or coherent pattern. As such, this model can indeed only be used as a baseline of comparison.
+'''
+
+# %%
