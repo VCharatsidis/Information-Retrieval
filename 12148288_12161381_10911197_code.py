@@ -43,7 +43,7 @@ rankings = simulate_rankings()
 '''
 # Step 2: Calculate the $\Delta$ measure
 
-We calculate the Expected reciprocal rank of a ranking using the guy
+We calculate the Expected reciprocal rank of a ranking using
 
 ERR := $\sum_{r = 1}^n \frac{1}{r}$ P(user stops at position r)
 
