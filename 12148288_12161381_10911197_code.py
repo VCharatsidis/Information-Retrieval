@@ -2,7 +2,9 @@
 # Import all dependencies
 import numpy as np
 import random as rd
+import math
 import re
+from scipy.stats import norm
 from copy import deepcopy
 
 # %%
@@ -11,23 +13,28 @@ from copy import deepcopy
 '''
 
 # %%
+
+
 def simulate_rankings():
     ''' This method creates all possible combinations of rankings for P and E.
-    
+
         @Output: a list of tuples. A tuple has 2 integer arrays (one ranking for P and one for E).
     '''
-    P = [[0, 0, 0], [1, 0, 0], [1, 1, 0], [1, 1, 1], [1, 0, 1], [0, 1, 1], [0, 0, 1], [0, 1, 0]]
-    E = [[0, 0, 0], [1, 0, 0], [1, 1, 0], [1, 1, 1], [1, 0, 1], [0, 1, 1], [0, 0, 1], [0, 1, 0]]
+    P = [[0, 0, 0], [1, 0, 0], [1, 1, 0], [1, 1, 1],
+         [1, 0, 1], [0, 1, 1], [0, 0, 1], [0, 1, 0]]
+    E = [[0, 0, 0], [1, 0, 0], [1, 1, 0], [1, 1, 1],
+         [1, 0, 1], [0, 1, 1], [0, 0, 1], [0, 1, 0]]
     rankings = []
-    
+
     for p in P:
         for e in E:
             tup1 = (p, e)
             rankings.append(tup1)
-    
+
     print(rankings)
     return rankings
-    
+
+
 rankings = simulate_rankings()
 
 # %%
@@ -50,11 +57,13 @@ As defined in the paper Expected Reciprocal Rank for Graded Relevance. Olivier C
 '''
 
 # %%
+
+
 def calculate_ERR(ranking):
     ''' This method calculates the ERR of a ranking. A ranking is a one dimensional interger list with length 3.
-    
+
         @Input: a one dimensional list of length 3 with zeros and ones.
-        
+
         @Output: a double (ERR score).
     '''
     ERR = 0
@@ -62,10 +71,11 @@ def calculate_ERR(ranking):
         prob_to_stop_at_r = ranking[r]/(r+1)
         for i in range(r):
             prob_to_stop_at_r *= 1 - ranking[i]
-            
+
         ERR += prob_to_stop_at_r
-        
+
     return ERR
+
 
 calculate_ERR(rankings[5][1])
 # rankings[5][1]
@@ -78,30 +88,33 @@ The buckets are made such that group 1 contains all pairs for which 0.05 < $\Del
 '''
 
 # %%
+
+
 def calculate_Dmeasures(rankings):
     ''' This method calculates the difference in ERR between the two rankings of every tuple, 
         for all tuples of rankings.
         Since we need to store the results in 10 different buckets we use a dictionary with keys 10 integers 
         from 0 to 9 with step 1 and values the list of our measurements.
-    
+
         @Input: a list of tuples.
-        
+
         @Output: A dictionary with keys integers from 0 to 9 and values 10 lists of doubles. 
-        
+
     '''
-    measures = {k:[] for k in range(10)}
-    
+    measures = {k: [] for k in range(10)}
+
     # The indices in measures are now the indices of the pair tuples
     for index, r in enumerate(rankings):
         ERR_P = calculate_ERR(r[0])
         ERR_E = calculate_ERR(r[1])
-        
+
         d_measure = ERR_E - ERR_P
-        
+
         if d_measure >= 0.05 and d_measure <= 0.95:
             measures[int(d_measure * 10)].append(index)
-            
+
     return measures
+
 
 # %%
 '''
@@ -118,6 +131,7 @@ We repeat until the interleaved list if full.
 # %%
 # from IPython.core.debugger import set_trace
 
+
 def convert_lists_to_labeled(list_a, list_b):
     considered_lists = [deepcopy(list_a), deepcopy(list_b)]
     label_results = []
@@ -126,64 +140,72 @@ def convert_lists_to_labeled(list_a, list_b):
     for doc_list in considered_lists:
         possible_labels = rd.sample(range(1, 20), 3)
         label_results.append(list(zip(doc_list, possible_labels)))
-        
+
     return label_results
+
 
 def team_draft_interleaving(list_a, list_b):
     ''' Team draft interleaving is performed by throwing a coin. If its heads we put in the interleaved list
         the first element of list A that is not already in,
         if its tails we put in the interleaved list the first element of list B that is not already in.
-        
+
         @Input: 2 lists of integers of length 3.
-        
+
         @Output: an interleaved list of tuples of length 3. Each tuple contain an integer (document ID) and a 0 or 1 
         depending of which list it came from.
     '''
-    
-    unique_doc_list = [ ]
-    interleaved_list = [ ]
+
+    unique_doc_list = []
+    interleaved_list = []
     counter = 0
-    list_a_labeled, list_b_labeled = convert_lists_to_labeled(deepcopy(list_a), deepcopy(list_b))
-    
+    list_a_labeled, list_b_labeled = convert_lists_to_labeled(
+        deepcopy(list_a), deepcopy(list_b))
+
     while counter < 3:
         coin_toss = rd.random()
-                   
+
         if(coin_toss > 0.5):
-            put_first_available_url_in_interleaved(list_a_labeled, 0, interleaved_list, unique_doc_list)
+            put_first_available_url_in_interleaved(
+                list_a_labeled, 0, interleaved_list, unique_doc_list)
             counter += 1
-            
+
             if(counter == 3):
                 return interleaved_list
-            
-            put_first_available_url_in_interleaved(list_b_labeled, 1, interleaved_list, unique_doc_list)  
+
+            put_first_available_url_in_interleaved(
+                list_b_labeled, 1, interleaved_list, unique_doc_list)
             counter += 1
         else:
-            put_first_available_url_in_interleaved(list_b_labeled, 1, interleaved_list, unique_doc_list)
+            put_first_available_url_in_interleaved(
+                list_b_labeled, 1, interleaved_list, unique_doc_list)
             counter += 1
             if(counter == 3):
                 return interleaved_list
-            
-            put_first_available_url_in_interleaved(list_a_labeled, 0, interleaved_list, unique_doc_list)
+
+            put_first_available_url_in_interleaved(
+                list_a_labeled, 0, interleaved_list, unique_doc_list)
             counter += 1
-            
+
     print("List is:", interleaved_list)
     return interleaved_list
+
 
 def put_first_available_url_in_interleaved(a_list, index_list, interleaved_list, unique_doc_list):
     ''' Helper method that creates a tuple with and integer (document ID) and 
         a 0 or 1 which indicates from which list it came from and adds it in the interleaved list. 
-        
+
         @Input: - a list of intergers of length 3.
                 - a 0 or 1 indicator of the list.
                 - the interleaved list with all tuples of rnakings.
-         
+
     '''
-    
+
     for i in a_list:
         if i[1] not in unique_doc_list:
             interleaved_list.append((i[0], index_list))
             unique_doc_list.append(i[1])
             return
+
 
 # %%
 team_draft_interleaving(rankings[0][0], rankings[0][1])
@@ -203,6 +225,8 @@ as defined in the paper A Probabilistic Method for Inferring Preferences from Cl
 '''
 
 # %%
+
+
 def probabilistic_interleaving(list_a, list_b):
     ''' Probabilistic interleaving perfromed by throwing coins, if its heads we use the softmax function of list A
         to choose randomly (with higher probability the more relevant rankings)
@@ -210,16 +234,16 @@ def probabilistic_interleaving(list_a, list_b):
         After we put the choosen doc we remove it from both lists A and B softmaxes.
         We do this until the interleaved list is full.
         The interleaved list contains tuples with the document ID and a 0 or 1 considering the list that it came from.
-        
+
         @Input: 2 lists of integers of length 3.
-        
+
         @Output: an interleaved list of tuples of length 3. Each tuple contain an integer (document ID) and a 0 or 1 
         depending of which list it came from.
-    
+
     '''
-    interleaved_list = [ ]
+    interleaved_list = []
     counter = 0
-    
+
     while counter < 3:
         coin_toss = rd.random()
 
@@ -235,22 +259,23 @@ def probabilistic_interleaving(list_a, list_b):
             list_b.remove(chosen)
             list_a.remove(chosen)
             counter += 1
-    
+
     return interleaved_list
-    
-def softmax(rankings, tau = 3):
+
+
+def softmax(rankings, tau=3):
     ''' Helper method that calculates the probabilities of every document in the given list
         using the softmax function in a vectorised from.
-        
+
         @Input: list of intergers of length 3 (rankings).
-        
+
         @Output: a vector with probabilities for every document.
     '''
     numerators = 1 / np.power(rankings, tau)
     denominator = numerators.sum()
-    
+
     return numerators / denominator
-    
+
 
 # %%
 '''
@@ -258,6 +283,8 @@ def softmax(rankings, tau = 3):
 '''
 
 # %%
+
+
 class YandexData():
     """
         The structure of lookup table:
@@ -290,9 +317,10 @@ class YandexData():
         queries_lookup = {}
 
         # Lambda functions
-        new_item = lambda: {'sessions': [], 'docs': set()} 
-        turn2int = lambda x: [int(i) for i in x] 
-        
+        def new_item(): return {'sessions': [], 'docs': set()}
+
+        def turn2int(x): return [int(i) for i in x]
+
         with open(self.path, 'r') as f:
             click = []
             last_q = None
@@ -315,7 +343,7 @@ class YandexData():
                     # Append documents for this query and add session
                     it['docs'] = it['docs'].union(cutoff_urls)
                     it['sessions'].append({'urls': cutoff_urls, 'clicks': []})
-                    
+
                     queries_lookup[current_q] = it
                     last_q = current_q
 
@@ -330,22 +358,30 @@ class YandexData():
         self.queries_lookup = queries_lookup
 
 # %%
+
+
 class ClickModel(object):
     def __init__(self):
         pass
+
     def train(self, data):
         raise NotImplementedError
+
     def get_probs(self, rankings):
         raise NotImplementedError
+
     def is_click(self, rankings, epsilon=0.1):
         """
             simulate the click, return a boolean list of the same length as `rankings`, True means clicked
         """
         probs = self.get_probs(rankings, epsilon)
-        click_fn = lambda p: rd.uniform(0, 1) < p
+
+        def click_fn(p): return rd.uniform(0, 1) < p
         return list(map(click_fn, probs))
 
 # %%
+
+
 class PBM(ClickModel):
     def __init__(self):
         self.alpha_uq = {}
@@ -445,8 +481,10 @@ class PBM(ClickModel):
             args[0]] * (1 - epsilon if args[1] == 1 else epsilon)
         return list(map(prob_fn, enumerate(rankings)))
 
+
 # %%
 CUTOFF = 3
+
 
 class RCM(ClickModel):
     """
@@ -478,6 +516,7 @@ class RCM(ClickModel):
         """
         return [self.rho] * len(rankings)
 
+
 # %%
 '''
 ### Step 5: Simulate Interleaving Experiment
@@ -500,10 +539,12 @@ for i, bin_val in calculate_Dmeasures(rankings).items():
         team_draft_interleaving(couple[0], couple[1])
 
 # %%
+
+
 def simulate_experiment(rankingA, rankingB, model, interleave_fn=team_draft_interleaving, k=100):
     E_wins = 0
     P_wins = 0
-    
+
     for i in range(k):
         E_clicks = 0
         P_clicks = 0
@@ -518,12 +559,62 @@ def simulate_experiment(rankingA, rankingB, model, interleave_fn=team_draft_inte
                     E_clicks += 1
                 else:
                     P_clicks += 1
-        
+
         if E_clicks > P_clicks:
             E_wins += 1
         elif P_clicks > E_clicks:
             P_wins += 1
-    
+
     return (E_wins + 1) / (E_wins + P_wins + 1)
 
+
 # %%
+'''
+### Step 6: Estimate sample size
+'''
+
+
+def calc_sample_size(p_val, alpha=0.05, beta=0.10, p_null=0.5):
+    z = norm.ppf(1-alpha)*math.sqrt(p_null * (1 - p_null)) + \
+        norm.ppf(1-beta) * math.sqrt(p_val * (1-p_val))
+
+    if p_val == p_null:
+        return math.inf
+
+    if z == 0.0:
+        return -1
+
+    return ((z/(abs(p_val-p_null)))**2) + 1/abs(p_val-p_null)
+
+
+def calc_sample_size_for_bins(interleave_fn=team_draft_interleaving, model=model_PBM, rankings=rankings):
+    bins = calculate_Dmeasures(rankings)
+
+    for bin_key, bin_el in bins.items():
+        minimum, mean, maximum = calc_sample_size_for_bin(bin_el, interleave_fn, model)
+
+
+def calc_sample_size_for_bin(binned_el, interleave_fn, model):
+    result = []
+
+    for pair in binned_el:
+        pairE = rankings[pair][0]
+        pairP = rankings[pair][1]
+        proportion_E_win = simulate_experiment(pairE, pairP, model, interleave_fn)
+        sample_size = calc_sample_size(proportion_E_win)
+
+        if sample_size >= 0:
+            result.append(calc_sample_size(proportion_E_win))
+
+    if len(binned_el) > 0:
+        maximum = np.max(result)
+        minimum = np.min(result)
+        mean = np.mean(result)
+
+        return (minimum, mean, maximum)
+    
+    return math.inf, math.inf, math.inf
+        
+
+calc_sample_size_for_bins()
+
