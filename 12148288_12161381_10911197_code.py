@@ -251,12 +251,14 @@ def probabilistic_interleaving(list_a, list_b):
         if(coin_toss > 0.5):
             probs = softmax(list_a)
             chosen = np.random.choice(list_a, probs)
+            interleaved_list.append(chosen, 0)
             list_a.remove(chosen)
             list_b.remove(chosen)
             counter += 1
         else:
             probs = softmax(list_b)
             chosen = np.random.choice(list_b, probs)
+            interleaved_list.append(chosen, 1)
             list_b.remove(chosen)
             list_a.remove(chosen)
             counter += 1
