@@ -68,14 +68,19 @@ def calculate_ERR(ranking):
 
         @Output: a double (ERR score).
     '''
+
+
     ERR = 0
+
+    theta = []
     for r in range(len(ranking)):
-        prob_to_stop_at_r = ranking[r]/(r+1)/2
+        theta.append((2**ranking[r]-1)/2)
+
+    for r in range(len(ranking)):
+        temp = 1
         for i in range(r):
-            prob_to_stop_at_r *= 1 - ranking[i]/2
-
-        ERR += prob_to_stop_at_r
-
+            temp *= 1 - theta[i]
+        ERR += temp * theta[r]/(r+1)
     return ERR
 
 
@@ -277,7 +282,7 @@ def probabilistic_interleaving(list_a, list_b):
         depending of which list it came from.
 
     '''
-    interleaved_list = [ ]
+    interleaved_list = []
     counter = 0
     list_a, list_b = deepcopy(list_a), deepcopy(list_b)
     while counter < 3:
@@ -306,13 +311,13 @@ def probabilistic_interleaving(list_a, list_b):
             interleaved_list.append(tup)
 
         counter += 1
-      
-        if chosen in list_a: 
+
+        if chosen in list_a:
             list_a.remove(chosen)
-            
-        if chosen in list_b: 
+
+        if chosen in list_b:
             list_b.remove(chosen)
-            
+
     return interleaved_list
 
 
@@ -320,6 +325,7 @@ def interleave(list_a, list_b, interleave_fn=team_draft_interleaving, max_docs=2
     labeled_a, labeled_b = convert_lists_to_labeled(list_a, list_b, max_docs)
 
     return interleave_fn(labeled_a, labeled_b)
+
 
 interleave((1, 0, 1), (0, 0, 1), probabilistic_interleaving)
 
@@ -404,6 +410,8 @@ class YandexData():
         self.queries_lookup = queries_lookup
 
 # %%
+
+
 class ClickModel(object):
     def __init__(self):
         pass
@@ -424,6 +432,8 @@ class ClickModel(object):
         return list(map(click_fn, probs))
 
 # %%
+
+
 class PBM(ClickModel):
     def __init__(self):
         super(PBM, self).__init__()
@@ -585,6 +595,8 @@ model_RCM = RCM()
 model_RCM.train(yd, True)
 
 # %%
+
+
 def simulate_experiment(rankingA, rankingB, model, interleave_fn=team_draft_interleaving, k=100):
     E_wins = 0
     P_wins = 0
@@ -618,6 +630,8 @@ def simulate_experiment(rankingA, rankingB, model, interleave_fn=team_draft_inte
 '''
 
 # %%
+
+
 def calc_sample_size(p_val, alpha=0.05, beta=0.10, p_null=0.5):
     z = norm.ppf(1-alpha)*math.sqrt(p_null * (1 - p_null)) + \
         norm.ppf(1-beta) * math.sqrt(p_val * (1-p_val))
@@ -643,7 +657,7 @@ def calc_sample_size_for_bins(interleave_fn=team_draft_interleaving, model=model
         table.loc[bin_key]['minimum'] = minimum
         table.loc[bin_key]['mean'] = mean
         table.loc[bin_key]['maximum'] = maximum
-    
+
     return table
 
 
@@ -680,13 +694,17 @@ table = calc_sample_size_for_bins(interleave_fn=probabilistic_interleaving)
 # %%
 int_methods = [team_draft_interleaving, probabilistic_interleaving]
 
+
 def run_all_setups(models=[model_PBM, model_RCM], methods=[team_draft_interleaving, probabilistic_interleaving]):
     for model in models:
         for method in methods:
-            table_setup = calc_sample_size_for_bins(interleave_fn=method, model=model)
-            # TODO: What should we do?
+            print(method.__name__)
+            table_setup = calc_sample_size_for_bins(
+                interleave_fn=method, model=model)
+
             print(table_setup)
-            table_setup.plot.bar()
+            plot_title = '{}_{}'.format(model.__class__.__name__, method.__name__)
+            table_setup.plot.bar(title=plot_title)
 
 
 list_a = [3, 1, 5]
@@ -694,11 +712,10 @@ list_b = [1, 2, 10]
 
 probs = softmax(list_a)
 print(probs)
-res = np.random.choice(list_a, 1, p = probs)
+res = np.random.choice(list_a, 1, p=probs)
 print(res)
 interleaved = probabilistic_interleaving(list_a, list_b)
 print(interleaved)
 
 # %%
 run_all_setups()
-
