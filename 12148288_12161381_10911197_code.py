@@ -2,6 +2,7 @@
 # Import all dependencies
 import numpy as np
 import random as rd
+import pandas as pd
 import math
 import re
 from scipy.stats import norm
@@ -589,9 +590,14 @@ def calc_sample_size(p_val, alpha=0.05, beta=0.10, p_null=0.5):
 
 def calc_sample_size_for_bins(interleave_fn=team_draft_interleaving, model=model_PBM, rankings=rankings):
     bins = calculate_Dmeasures(rankings)
+    bin_vals = list(bins.keys())
+    table = pd.DataFrame(index=bin_vals,columns=['minimum', 'mean', 'maximum'])    
 
     for bin_key, bin_el in bins.items():
         minimum, mean, maximum = calc_sample_size_for_bin(bin_el, interleave_fn, model)
+        table.loc[bin_key]['minimum'] = minimum
+    
+    return table
 
 
 def calc_sample_size_for_bin(binned_el, interleave_fn, model):
@@ -616,5 +622,4 @@ def calc_sample_size_for_bin(binned_el, interleave_fn, model):
     return math.inf, math.inf, math.inf
         
 
-calc_sample_size_for_bins()
-
+table = calc_sample_size_for_bins()
