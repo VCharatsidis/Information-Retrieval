@@ -7,6 +7,7 @@ import math
 import re
 from scipy.stats import norm
 from copy import deepcopy
+import matplotlib.pyplot as plt
 
 # %%
 '''
@@ -69,9 +70,9 @@ def calculate_ERR(ranking):
     '''
     ERR = 0
     for r in range(len(ranking)):
-        prob_to_stop_at_r = ranking[r]/(r+1)
+        prob_to_stop_at_r = ranking[r]/(r+1)/2
         for i in range(r):
-            prob_to_stop_at_r *= 1 - ranking[i]
+            prob_to_stop_at_r *= 1 - ranking[i]/2
 
         ERR += prob_to_stop_at_r
 
@@ -83,8 +84,6 @@ calculate_ERR(rankings[5][1])
 
 # %%
 '''
-Then we calculate the $\Delta $measures and split them in 10 buckets.
-
 The buckets are made such that group 1 contains all pairs for which 0.05 < $\Delta$ measure ≤ 0.1, group 2 all pairs for which 0.1 < $\Delta$measure ≤ 0.2, etc.
 '''
 
@@ -110,7 +109,6 @@ def calculate_Dmeasures(rankings):
         ERR_E = calculate_ERR(r[1])
 
         d_measure = ERR_E - ERR_P
-
         if d_measure >= 0.05 and d_measure <= 0.95:
             measures[int(d_measure * 10)].append(index)
 
@@ -118,9 +116,11 @@ def calculate_Dmeasures(rankings):
 
 
 # %%
+print(calculate_Dmeasures(rankings))
+
+# %%
 '''
 # Step 3: Implement Team-Draft Interleaving and Probabilistic Intearleaving
-
 $\textbf{Team Draft Interleaving}$ is performed by throwing a coin. If its heads we put, in the interleaved list,
 the first document of list A that is not already in and then the first document of list B that is not already in,
 if its tails we start with B and then A.
@@ -138,7 +138,8 @@ def convert_lists_to_labeled(doc_list_a, doc_list_b, max_docs=20):
     while conflict:
         conflict = False
         for index_a, label_a in enumerate(possible_labels_a):
-            index_b = next((idx for idx, x in enumerate(possible_labels_b) if label_a == x), None)
+            index_b = next((idx for idx, x in enumerate(
+                possible_labels_b) if label_a == x), None)
 
             # If our relevance and docIDs conflict
             if index_b != None and doc_list_a[index_a] != doc_list_b[index_b]:
@@ -230,7 +231,6 @@ team_draft_interleaving(list_a, list_b)
 '''
 $\textbf{Probabilistic Intearleaving}$ is performed similarly but instead of choosing the first document we chose the documents from the lists probabilisticly where the probabilities of the documents are produced from 2 softmax functions
 (one for every list).
-
 The softmax function assigns probability of selecting a document ($P_{s_{x}}(d)$) that is inversely proportional to a power of the rank $r_x(d)$ of a document d in a list.
 
 $P_{s_{x}}(d) = \frac{ \frac{1}{r_x(d)^\tau}}{\sum_{d2\in D} \frac{1}{r_x(d2)^\tau}}$
@@ -253,36 +253,42 @@ def softmax(a_list, tau=3):
     '''
     rankings = []
 
-    for i,doc in enumerate(a_list):
+    for i, doc in enumerate(a_list):
         rankings.append(i+1)
-    
+
     numerators = 1 / np.power(rankings, tau)
     denominator = numerators.sum()
-   
+
     return numerators / denominator
 
 
+# %%
+
 def probabilistic_interleaving(list_a, list_b):
     ''' Probabilistic interleaving perfromed by throwing coins, if its heads we use the softmax function of list A
-        to choose randomly (with higher probability the more relevant rankings)
-        else we use the softmax function of list B. 
+        to choose randomly(with higher probability the more relevant rankings)
+        else we use the softmax function of list B.
         After we put the choosen doc we remove it from both lists A and B softmaxes.
         We do this until the interleaved list is full.
         The interleaved list contains tuples with the document ID and a 0 or 1 considering the list that it came from.
 
         @Input: 2 lists of integers of length 3.
-
-        @Output: an interleaved list of tuples of length 3. Each tuple contain an integer (document ID) and a 0 or 1 
+        @Output: an interleaved list of tuples of length 3. Each tuple contain an integer(document ID) and a 0 or 1
         depending of which list it came from.
 
     '''
-    interleaved_list = []
+    interleaved_list = [ ]
     counter = 0
-
+    list_a, list_b = deepcopy(list_a), deepcopy(list_b)
     while counter < 3:
         coin_toss = rd.random()
 
+        if len(list_a+list_b) == 0:
+            raise InvalidArgumentError
         if(coin_toss > 0.5):
+            if len(list_a) == 0:
+                continue
+
             probs = softmax(list_a)
             chosen_idx = np.random.choice(range(len(list_a)), p=probs)
             chosen = list_a[chosen_idx]
@@ -290,6 +296,9 @@ def probabilistic_interleaving(list_a, list_b):
             interleaved_list.append(tup)
 
         else:
+            if len(list_b) == 0:
+                continue
+
             probs = softmax(list_b)
             chosen_idx = np.random.choice(range(len(list_b)), p=probs)
             chosen = list_b[chosen_idx]
@@ -297,12 +306,18 @@ def probabilistic_interleaving(list_a, list_b):
             interleaved_list.append(tup)
 
         counter += 1
-
-        if chosen in list_a:
+      
+        if chosen in list_a: 
             list_a.remove(chosen)
-
-        if chosen in list_b:
+            
+        if chosen in list_b: 
             list_b.remove(chosen)
+            
+    return interleaved_list
+
+def softmax(a_list, tau=3):
+    ''' Helper method that calculates the probabilities of every document in the given list
+        using the softmax function in a vectorised from.'''
 
     return interleaved_list
 
@@ -394,8 +409,6 @@ class YandexData():
         self.queries_lookup = queries_lookup
 
 # %%
-
-
 class ClickModel(object):
     def __init__(self):
         pass
@@ -416,10 +429,9 @@ class ClickModel(object):
         return list(map(click_fn, probs))
 
 # %%
-
-
 class PBM(ClickModel):
     def __init__(self):
+        super(PBM, self).__init__()
         self.alpha_uq = {}
         self.gamma_r = [rd.uniform(0, 1) for _ in range(CUTOFF)]
 
@@ -528,6 +540,7 @@ class RCM(ClickModel):
     """
 
     def __init__(self):
+        super(RCM, self).__init__()
         self.gamma = [0] * 3
 
     def train(self, data, load=True):
@@ -587,7 +600,7 @@ def simulate_experiment(rankingA, rankingB, model, interleave_fn=team_draft_inte
         new_results_w_models = interleave(rankingA, rankingB, interleave_fn)
         new_results_relevance = [i[0] for i in new_results_w_models]
         ranker_clicked = [i[1] for i in new_results_w_models]
-        clicks = model.is_click(new_results_relevance, 0.1)
+        clicks = model.is_click(rankings=new_results_relevance, epsilon=0.1)
 
         for index, click in enumerate(clicks):
             if click:
@@ -609,7 +622,7 @@ def simulate_experiment(rankingA, rankingB, model, interleave_fn=team_draft_inte
 # Step 6: Estimate sample size
 '''
 
-
+# %%
 def calc_sample_size(p_val, alpha=0.05, beta=0.10, p_null=0.5):
     z = norm.ppf(1-alpha)*math.sqrt(p_null * (1 - p_null)) + \
         norm.ppf(1-beta) * math.sqrt(p_val * (1-p_val))
@@ -633,7 +646,9 @@ def calc_sample_size_for_bins(interleave_fn=team_draft_interleaving, model=model
         minimum, mean, maximum = calc_sample_size_for_bin(
             bin_el, interleave_fn, model)
         table.loc[bin_key]['minimum'] = minimum
-
+        table.loc[bin_key]['mean'] = mean
+        table.loc[bin_key]['maximum'] = maximum
+    
     return table
 
 
@@ -664,14 +679,31 @@ table = calc_sample_size_for_bins(interleave_fn=probabilistic_interleaving)
 
 # %%
 '''
-# Step 7: Analysis
+    # Step 7: Analysis
 '''
+
+# %%
 int_methods = [team_draft_interleaving, probabilistic_interleaving]
 
-
-def run_all_setups(models=[RCM, PBM], methods=[team_draft_interleaving, probabilistic_interleaving]):
+def run_all_setups(models=[model_PBM, model_RCM], methods=[team_draft_interleaving, probabilistic_interleaving]):
     for model in models:
         for method in methods:
-            table_setup = calc_sample_size_for_bins(
-                interleave_fn=method, model=model)
-            # TODO: What should we do with this table.
+            table_setup = calc_sample_size_for_bins(interleave_fn=method, model=model)
+            # TODO: What should we do?
+            print(table_setup)
+            table_setup.plot.bar()
+
+
+list_a = [3, 1, 5]
+list_b = [1, 2, 10]
+
+probs = softmax(list_a)
+print(probs)
+res = np.random.choice(list_a, 1, p = probs)
+print(res)
+interleaved = probabilistic_interleaving(list_a, list_b)
+print(interleaved)
+
+# %%
+run_all_setups()
+
