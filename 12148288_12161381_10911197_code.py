@@ -573,8 +573,6 @@ def simulate_experiment(rankingA, rankingB, model, interleave_fn=team_draft_inte
 '''
 ### Step 6: Estimate sample size
 '''
-
-
 def calc_sample_size(p_val, alpha=0.05, beta=0.10, p_null=0.5):
     z = norm.ppf(1-alpha)*math.sqrt(p_null * (1 - p_null)) + \
         norm.ppf(1-beta) * math.sqrt(p_val * (1-p_val))
@@ -623,3 +621,15 @@ def calc_sample_size_for_bin(binned_el, interleave_fn, model):
         
 
 table = calc_sample_size_for_bins()
+
+# %%
+'''
+### Step 7: Analysis
+'''
+int_methods = [team_draft_interleaving, probabilistic_interleaving]
+
+def run_all_setups(models=[RCM, PBM], methods=[team_draft_interleaving, probabilistic_interleaving]):
+    for model in models:
+        for method in methods:
+            table_setup = calc_sample_size_for_bins(interleave_fn=method, model=model)
+            # TODO: What should we do?
