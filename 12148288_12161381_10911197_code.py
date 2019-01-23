@@ -632,4 +632,5 @@ def run_all_setups(models=[RCM, PBM], methods=[team_draft_interleaving, probabil
     for model in models:
         for method in methods:
             table_setup = calc_sample_size_for_bins(interleave_fn=method, model=model)
-            # TODO: What should we do?
+            # TODO: What should we do with this table.
+            
