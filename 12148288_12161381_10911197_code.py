@@ -7,12 +7,12 @@ import math
 import re
 from scipy.stats import norm
 from copy import deepcopy
+import matplotlib.pyplot as plt
 
 # %%
 '''
 ### Step 1: Simulate Rankings of Relevance for E and P
 '''
-
 
 # %%
 def simulate_rankings():
@@ -52,7 +52,6 @@ $P = \prod_{i=1}^{r-1} (1-R_i)R_r$
 where $R_i = \frac{2^g - 1}{2^{g_{max}}}$ where $g_i$ is the grade of the i-th document and $g_{max}$ is the the maximum relevance.
 '''
 
-
 # %%
 
 
@@ -65,9 +64,9 @@ def calculate_ERR(ranking):
     '''
     ERR = 0
     for r in range(len(ranking)):
-        prob_to_stop_at_r = ranking[r]/(r+1)
+        prob_to_stop_at_r = ranking[r]/(r+1)/2
         for i in range(r):
-            prob_to_stop_at_r *= 1 - ranking[i]
+            prob_to_stop_at_r *= 1 - ranking[i]/2
 
         ERR += prob_to_stop_at_r
 
@@ -104,7 +103,6 @@ def calculate_Dmeasures(rankings):
         ERR_E = calculate_ERR(r[1])
 
         d_measure = ERR_E - ERR_P
-
         if d_measure >= 0.05 and d_measure <= 0.95:
             measures[int(d_measure * 10)].append(index)
 
@@ -112,9 +110,11 @@ def calculate_Dmeasures(rankings):
 
 
 # %%
+print(calculate_Dmeasures(rankings))
+
+# %%
 '''
 ### Step 3: Implement Team-Draft Interleaving and Probabilistic Intearleaving
-
 '''
 
 # %%
@@ -220,19 +220,24 @@ def probabilistic_interleaving(list_a, list_b):
         depending of which list it came from.
 
     '''
-    interleaved_list = []
+    interleaved_list = [ ]
     counter = 0
-
+    list_a, list_b = deepcopy(list_a), deepcopy(list_b)
     while counter < 3:
         coin_toss = rd.random()
-
+        if len(list_a+list_b) == 0:
+            raise InvalidArgumentError
         if(coin_toss > 0.5):
+            if len(list_a) == 0:
+                continue
             probs = softmax(list_a)
             chosen = np.random.choice(list_a, 1, p = probs)
             tup = (int(chosen), 0)
             interleaved_list.append(tup)
                
         else:
+            if len(list_b) == 0:
+                continue
             probs = softmax(list_b)
             chosen = np.random.choice(list_b, 1, p = probs)
             tup = (int(chosen), 1)
@@ -241,12 +246,15 @@ def probabilistic_interleaving(list_a, list_b):
         counter += 1  
         if chosen in list_a: 
             list_a.remove(chosen)
-            counter += 1
-
+            
+        if chosen in list_b: 
+            list_b.remove(chosen)
+            
     return interleaved_list
+    
 
 
-def softmax(rankings, tau=3):
+def softmax(a_list, tau=3):
     ''' Helper method that calculates the probabilities of every document in the given list
         using the softmax function in a vectorised from.
 
@@ -254,11 +262,15 @@ def softmax(rankings, tau=3):
 
         @Output: a vector with probabilities for every document.
     '''
+    rankings = []
+    for i,doc in enumerate(a_list):
+        rankings.append(i+1)
+    
     numerators = 1 / np.power(rankings, tau)
  
     denominator = numerators.sum()
+   
     return numerators / denominator
-
 
 # %%
 '''
@@ -341,8 +353,6 @@ class YandexData():
         self.queries_lookup = queries_lookup
 
 # %%
-
-
 class ClickModel(object):
     def __init__(self):
         pass
@@ -363,10 +373,9 @@ class ClickModel(object):
         return list(map(click_fn, probs))
 
 # %%
-
-
 class PBM(ClickModel):
     def __init__(self):
+        super(PBM, self).__init__()
         self.alpha_uq = {}
         self.gamma_r = [rd.uniform(0, 1) for _ in range(CUTOFF)]
 
@@ -475,6 +484,7 @@ class RCM(ClickModel):
     """
 
     def __init__(self):
+        super(RCM, self).__init__()
         self.gamma = [0] * 3
 
     def train(self, data, load=True):
@@ -534,7 +544,7 @@ def simulate_experiment(rankingA, rankingB, model, interleave_fn=team_draft_inte
         new_results_w_models = interleave_fn(rankingA, rankingB)
         new_results_relevance = [i[0] for i in new_results_w_models]
         ranker_clicked = [i[1] for i in new_results_w_models]
-        clicks = model.is_click(new_results_relevance, 0.1)
+        clicks = model.is_click(rankings=new_results_relevance, epsilon=0.1)
 
         for index, click in enumerate(clicks):
             if click:
@@ -578,6 +588,8 @@ def calc_sample_size_for_bins(interleave_fn=team_draft_interleaving, model=model
     for bin_key, bin_el in bins.items():
         minimum, mean, maximum = calc_sample_size_for_bin(bin_el, interleave_fn, model)
         table.loc[bin_key]['minimum'] = minimum
+        table.loc[bin_key]['mean'] = mean
+        table.loc[bin_key]['maximum'] = maximum
     
     return table
 
@@ -604,7 +616,7 @@ def calc_sample_size_for_bin(binned_el, interleave_fn, model):
     return math.inf, math.inf, math.inf
         
 
-table = calc_sample_size_for_bins()
+
 
 # %%
 '''
@@ -614,8 +626,16 @@ table = calc_sample_size_for_bins()
 # %%
 int_methods = [team_draft_interleaving, probabilistic_interleaving]
 
-def run_all_setups(models=[RCM, PBM], methods=[team_draft_interleaving, probabilistic_interleaving]):
+def run_all_setups(models=[model_PBM, model_RCM], methods=[team_draft_interleaving, probabilistic_interleaving]):
     for model in models:
         for method in methods:
             table_setup = calc_sample_size_for_bins(interleave_fn=method, model=model)
             # TODO: What should we do?
+            print(table_setup)
+            table_setup.plot.bar()
+
+
+# %%
+run_all_setups()
+
+# %%
