@@ -634,6 +634,18 @@ def run_all_setups(models=[model_PBM, model_RCM], methods=[team_draft_interleavi
             print(table_setup)
             table_setup.plot.bar()
 
+# In[73]:
+
+
+list_a = [3, 1, 5]
+list_b = [1, 2, 10]
+
+probs = softmax(list_a)
+print(probs)
+res = np.random.choice(list_a, 1, p = probs)
+print(res)
+interleaved = probabilistic_interleaving(list_a, list_b)
+print(interleaved)
 
 # %%
 run_all_setups()
