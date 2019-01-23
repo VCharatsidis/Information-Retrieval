@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # %%
 # Import all dependencies
 import numpy as np
@@ -13,25 +12,10 @@ from copy import deepcopy
 '''
 ### Step 1: Simulate Rankings of Relevance for E and P
 '''
-=======
-
-# coding: utf-8
-
-# In[1]:
 
 
-
-import numpy as np
-import random
-
-
-# In[2]:
->>>>>>> probabilistic fixed
-
-
-
+# %%
 def simulate_rankings():
-<<<<<<< HEAD
     ''' This method creates all possible combinations of rankings for P and E.
 
         @Output: a list of tuples. A tuple has 2 integer arrays (one ranking for P and one for E).
@@ -40,10 +24,6 @@ def simulate_rankings():
          [1, 0, 1], [0, 1, 1], [0, 0, 1], [0, 1, 0]]
     E = [[0, 0, 0], [1, 0, 0], [1, 1, 0], [1, 1, 1],
          [1, 0, 1], [0, 1, 1], [0, 0, 1], [0, 1, 0]]
-=======
-    P = [[0, 0, 0], [1, 0, 0], [1, 1, 0], [1, 1, 1], [1, 0, 1], [0, 1, 1], [0, 0, 1], [0, 1, 0]]
-    E = [[0, 0, 0], [1, 0, 0], [1, 1, 0], [1, 1, 1], [1, 0, 1], [0, 1, 1], [0, 0, 1], [0, 1, 0]]
->>>>>>> probabilistic fixed
     rankings = []
 
     for p in P:
@@ -57,7 +37,6 @@ def simulate_rankings():
 
 rankings = simulate_rankings()
 
-<<<<<<< HEAD
 # %%
 '''
 ### Step 2: Calculate the $\Delta$ measure
@@ -71,13 +50,9 @@ where n is the number of documents in the ranking and
 $P = \prod_{i=1}^{r-1} (1-R_i)R_r$
 
 where $R_i = \frac{2^g - 1}{2^{g_{max}}}$ where $g_i$ is the grade of the i-th document and $g_{max}$ is the the maximum relevance.
-=======
->>>>>>> probabilistic fixed
-
-# In[3]:
+'''
 
 
-<<<<<<< HEAD
 # %%
 
 
@@ -88,9 +63,6 @@ def calculate_ERR(ranking):
 
         @Output: a double (ERR score).
     '''
-=======
-def calculate_ERR(ranking):
->>>>>>> probabilistic fixed
     ERR = 0
     for r in range(len(ranking)):
         prob_to_stop_at_r = ranking[r]/(r+1)
@@ -105,8 +77,8 @@ def calculate_ERR(ranking):
 calculate_ERR(rankings[5][1])
 # rankings[5][1]
 
-
-<<<<<<< HEAD
+# %%
+'''
 The buckets are made such that group 1 contains all pairs for which 0.05 < $\Delta$ measure ≤ 0.1, group 2 all pairs for which 0.1 < $\Delta$measure ≤ 0.2, etc.
 '''
 
@@ -127,14 +99,6 @@ def calculate_Dmeasures(rankings):
     measures = {k: [] for k in range(10)}
 
     # The indices in measures are now the indices of the pair tuples
-=======
-# In[4]:
-
-
-def calculate_Dmeasures(rankings):
-    
-    measures = {k:[] for k in range(10)}
->>>>>>> probabilistic fixed
     for index, r in enumerate(rankings):
         ERR_P = calculate_ERR(r[0])
         ERR_E = calculate_ERR(r[1])
@@ -147,17 +111,12 @@ def calculate_Dmeasures(rankings):
     return measures
 
 
-<<<<<<< HEAD
 # %%
 '''
 ### Step 3: Implement Team-Draft Interleaving and Probabilistic Intearleaving
-=======
->>>>>>> probabilistic fixed
 
-# In[5]:
+'''
 
-
-<<<<<<< HEAD
 # %%
 # from IPython.core.debugger import set_trace
 
@@ -187,11 +146,6 @@ def team_draft_interleaving(list_a, list_b):
 
     unique_doc_list = []
     interleaved_list = []
-=======
-def team_draft_interleaving(list_a, list_b):
-    
-    interleaved_list = [ ]
->>>>>>> probabilistic fixed
     counter = 0
     list_a_labeled, list_b_labeled = convert_lists_to_labeled(
         deepcopy(list_a), deepcopy(list_b))
@@ -224,7 +178,6 @@ def team_draft_interleaving(list_a, list_b):
     print("List is:", interleaved_list)
     return interleaved_list
 
-<<<<<<< HEAD
 
 def put_first_available_url_in_interleaved(a_list, index_list, interleaved_list, unique_doc_list):
     ''' Helper method that creates a tuple with and integer (document ID) and 
@@ -240,18 +193,9 @@ def put_first_available_url_in_interleaved(a_list, index_list, interleaved_list,
         if i[1] not in unique_doc_list:
             interleaved_list.append((i[0], index_list))
             unique_doc_list.append(i[1])
-=======
-    
-def put_first_available_url_in_interleaved(a_list, index_list, interleaved_list):
-    for i in a_list:
-        if i not in interleaved_list:
-            tup = (i, index_list)
-            intearleaved_list.append(tup)
->>>>>>> probabilistic fixed
             return
 
 
-<<<<<<< HEAD
 # %%
 team_draft_interleaving(rankings[0][0], rankings[0][1])
 
@@ -259,14 +203,10 @@ team_draft_interleaving(rankings[0][0], rankings[0][1])
 '''
 $\textbf{Probabilistic Intearleaving}$ is performed similarly but instead of choosing the first document we chose the documents from the lists probabilisticly where the probabilities of the documents are produced from 2 softmax functions
 (one for every list).
-=======
-# In[68]:
->>>>>>> probabilistic fixed
+'''
 
-
-
+# %%
 def probabilistic_interleaving(list_a, list_b):
-<<<<<<< HEAD
     ''' Probabilistic interleaving perfromed by throwing coins, if its heads we use the softmax function of list A
         to choose randomly (with higher probability the more relevant rankings)
         else we use the softmax function of list B. 
@@ -281,9 +221,6 @@ def probabilistic_interleaving(list_a, list_b):
 
     '''
     interleaved_list = []
-=======
-    interleaved_list = [ ]
->>>>>>> probabilistic fixed
     counter = 0
 
     while counter < 3:
@@ -304,7 +241,6 @@ def probabilistic_interleaving(list_a, list_b):
         counter += 1  
         if chosen in list_a: 
             list_a.remove(chosen)
-<<<<<<< HEAD
             counter += 1
 
     return interleaved_list
@@ -318,32 +254,12 @@ def softmax(rankings, tau=3):
 
         @Output: a vector with probabilities for every document.
     '''
-=======
-            
-        if chosen in list_b: 
-            list_b.remove(chosen)
-            
-    return interleaved_list
-    
-    
-def softmax(a_list, tau = 3):
-    rankings = []
-    for i,doc in enumerate(a_list):
-        rankings.append(i+1)
-    
->>>>>>> probabilistic fixed
     numerators = 1 / np.power(rankings, tau)
  
     denominator = numerators.sum()
-<<<<<<< HEAD
-
-=======
-   
->>>>>>> probabilistic fixed
     return numerators / denominator
 
 
-<<<<<<< HEAD
 # %%
 '''
 ### Step 4: Implement Click-based models
@@ -639,6 +555,8 @@ def simulate_experiment(rankingA, rankingB, model, interleave_fn=team_draft_inte
 '''
 ### Step 6: Estimate sample size
 '''
+
+# %%
 def calc_sample_size(p_val, alpha=0.05, beta=0.10, p_null=0.5):
     z = norm.ppf(1-alpha)*math.sqrt(p_null * (1 - p_null)) + \
         norm.ppf(1-beta) * math.sqrt(p_val * (1-p_val))
@@ -692,6 +610,8 @@ table = calc_sample_size_for_bins()
 '''
 ### Step 7: Analysis
 '''
+
+# %%
 int_methods = [team_draft_interleaving, probabilistic_interleaving]
 
 def run_all_setups(models=[RCM, PBM], methods=[team_draft_interleaving, probabilistic_interleaving]):
@@ -699,19 +619,3 @@ def run_all_setups(models=[RCM, PBM], methods=[team_draft_interleaving, probabil
         for method in methods:
             table_setup = calc_sample_size_for_bins(interleave_fn=method, model=model)
             # TODO: What should we do?
-=======
-
-# In[73]:
-
-
-list_a = [3, 1, 5]
-list_b = [1, 2, 10]
-
-probs = softmax(list_a)
-print(probs)
-res = np.random.choice(list_a, 1, p = probs)
-print(res)
-interleaved = probabilistic_interleaving(list_a, list_b)
-print(interleaved)
-
->>>>>>> probabilistic fixed
