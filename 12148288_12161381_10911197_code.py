@@ -130,10 +130,29 @@ We repeat until the interleaved list if full.
 # %%
 
 
-def convert_list_to_labeled(doc_list, max_docs=20):
-    possible_labels = rd.sample(range(1, max_docs), 3)
+def convert_list_to_labeled(doc_list_a, doc_list_b, max_docs=20):
+    possible_labels_a = rd.sample(range(1, max_docs), 3)
+    possible_labels_b = rd.sample(range(1, max_docs), 3)
+    conflict = True
 
-    return list(zip(doc_list, possible_labels))
+    while conflict:
+        conflict = False
+        for index_a, label_a in enumerate(possible_labels_a):
+            index_b = next((idx for idx, x in enumerate(possible_labels_b) if label_a == x), None)
+
+            # If our relevance and docIDs conflict
+            if index_b != None and doc_list_a[index_a] != doc_list_b[index_b]:
+                # Rerun the algorithm
+                conflict = True
+
+                if rd.random() > 0.5:
+                    possible_labels_a = rd.sample(range(1, max_docs), 3)
+                    break
+                else:
+                    possible_labels_b = rd.sample(range(1, max_docs), 3)
+                    break
+
+    return (list(zip(doc_list_a, possible_labels_a)), list(zip(doc_list_b, possible_labels_b)))
 
 
 def team_draft_interleaving(list_a, list_b):
@@ -204,8 +223,7 @@ def put_first_available_url_in_interleaved(a_list, index_list, interleaved_list,
 
 
 # %%
-list_a = convert_list_to_labeled(rankings[0][0])
-list_b = convert_list_to_labeled(rankings[0][1])
+list_a, list_b = convert_list_to_labeled(rankings[6][0], rankings[6][1])
 team_draft_interleaving(list_a, list_b)
 
 # %%
