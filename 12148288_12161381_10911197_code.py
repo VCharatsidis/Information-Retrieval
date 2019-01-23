@@ -130,7 +130,7 @@ We repeat until the interleaved list if full.
 # %%
 
 
-def convert_list_to_labeled(doc_list_a, doc_list_b, max_docs=20):
+def convert_lists_to_labeled(doc_list_a, doc_list_b, max_docs=20):
     possible_labels_a = rd.sample(range(1, max_docs), 3)
     possible_labels_b = rd.sample(range(1, max_docs), 3)
     conflict = True
@@ -223,7 +223,7 @@ def put_first_available_url_in_interleaved(a_list, index_list, interleaved_list,
 
 
 # %%
-list_a, list_b = convert_list_to_labeled(rankings[6][0], rankings[6][1])
+list_a, list_b = convert_lists_to_labeled(rankings[6][0], rankings[6][1])
 team_draft_interleaving(list_a, list_b)
 
 # %%
@@ -307,8 +307,7 @@ def probabilistic_interleaving(list_a, list_b):
     return interleaved_list
 
 def interleave(list_a, list_b, interleave_fn=team_draft_interleaving, max_docs=20):
-    labeled_a = convert_list_to_labeled(list_a, max_docs)
-    labeled_b = convert_list_to_labeled(list_b, max_docs)
+    labeled_a, labeled_b = convert_lists_to_labeled(list_a, list_b, max_docs)
 
     return interleave_fn(labeled_a, labeled_b)
 
@@ -578,14 +577,6 @@ model_RCM = RCM()
 model_RCM.train(yd, True)
 
 # %%
-for i, bin_val in calculate_Dmeasures(rankings).items():
-    pair_idx
-
-    for pair_idx in bin_val:
-        couple = rankings[pair_idx]
-        team_draft_interleaving(couple[0], couple[1])
-
-# %%
 def simulate_experiment(rankingA, rankingB, model, interleave_fn=team_draft_interleaving, k=100):
     E_wins = 0
     P_wins = 0
@@ -669,7 +660,7 @@ def calc_sample_size_for_bin(binned_el, interleave_fn, model):
     return math.inf, math.inf, math.inf
 
 
-table = calc_sample_size_for_bins()
+table = calc_sample_size_for_bins(interleave_fn=probabilistic_interleaving)
 
 # %%
 '''
