@@ -19,6 +19,7 @@ def simulate_rankings():
     P = [[0, 0, 0], [1, 0, 0], [1, 1, 0], [1, 1, 1], [1, 0, 1], [0, 1, 1], [0, 0, 1], [0, 1, 0]]
     E = [[0, 0, 0], [1, 0, 0], [1, 1, 0], [1, 1, 1], [1, 0, 1], [0, 1, 1], [0, 0, 1], [0, 1, 0]]
     rankings = []
+    
     for p in P:
         for e in E:
             tup1 = (p, e)
@@ -90,6 +91,7 @@ def calculate_Dmeasures(rankings):
     '''
     measures = {k:[] for k in range(10)}
     
+    # The indices in measures are now the indices of the pair tuples
     for index, r in enumerate(rankings):
         ERR_P = calculate_ERR(r[0])
         ERR_E = calculate_ERR(r[1])
@@ -114,43 +116,60 @@ We repeat until the interleaved list if full.
 '''
 
 # %%
+# from IPython.core.debugger import set_trace
+
+def convert_lists_to_labeled(list_a, list_b):
+    considered_lists = [deepcopy(list_a), deepcopy(list_b)]
+    label_results = []
+    # set_trace()
+
+    for doc_list in considered_lists:
+        possible_labels = rd.sample(range(1, 20), 3)
+        label_results.append(list(zip(doc_list, possible_labels)))
+        
+    return label_results
+
 def team_draft_interleaving(list_a, list_b):
     ''' Team draft interleaving is performed by throwing a coin. If its heads we put in the interleaved list
         the first element of list A that is not already in,
         if its tails we put in the interleaved list the first element of list B that is not already in.
         
-        @Input: 2 lists of intergers of length 3.
+        @Input: 2 lists of integers of length 3.
         
         @Output: an interleaved list of tuples of length 3. Each tuple contain an integer (document ID) and a 0 or 1 
         depending of which list it came from.
-    
     '''
+    
+    unique_doc_list = [ ]
     interleaved_list = [ ]
     counter = 0
+    list_a_labeled, list_b_labeled = convert_lists_to_labeled(deepcopy(list_a), deepcopy(list_b))
     
     while counter < 3:
-        coin_toss = random.random()
+        coin_toss = rd.random()
                    
         if(coin_toss > 0.5):
-            put_first_available_url_in_interleaved(list_a, 0, interleaved_list)
+            put_first_available_url_in_interleaved(list_a_labeled, 0, interleaved_list, unique_doc_list)
             counter += 1
-            if(counter == 2):
+            
+            if(counter == 3):
                 return interleaved_list
             
-            put_first_available_url_in_interleaved(list_b, 1, interleaved_list)  
+            put_first_available_url_in_interleaved(list_b_labeled, 1, interleaved_list, unique_doc_list)  
             counter += 1
         else:
-            put_first_available_url_in_interleaved(list_b, 1, interleaved_list)
+            put_first_available_url_in_interleaved(list_b_labeled, 1, interleaved_list, unique_doc_list)
             counter += 1
-            if(counter == 2):
+            if(counter == 3):
                 return interleaved_list
             
-            put_first_available_url_in_interleaved(list_a, 0, interleaved_list)
+            put_first_available_url_in_interleaved(list_a_labeled, 0, interleaved_list, unique_doc_list)
             counter += 1
             
+    print("List is:", interleaved_list)
     return interleaved_list
 
-def put_first_available_url_in_interleaved(a_list, index_list, interleaved_list):
+def put_first_available_url_in_interleaved(a_list, index_list, interleaved_list, unique_doc_list):
     ''' Helper method that creates a tuple with and integer (document ID) and 
         a 0 or 1 which indicates from which list it came from and adds it in the interleaved list. 
         
@@ -159,18 +178,15 @@ def put_first_available_url_in_interleaved(a_list, index_list, interleaved_list)
                 - the interleaved list with all tuples of rnakings.
          
     '''
+    
     for i in a_list:
-        already_in_interleaved = False
-        for tupl in interleaved_list:
-            if tupl[0] == i:
-                already_in_interleaved = True
-                
-        if i not in already_in_interleaved:
-            tup = (i, index_list)
-            intearleaved_list.append(tup)
+        if i[1] not in unique_doc_list:
+            interleaved_list.append((i[0], index_list))
+            unique_doc_list.append(i[1])
             return
-  
 
+# %%
+team_draft_interleaving(rankings[0][0], rankings[0][1])
 
 # %%
 '''
@@ -187,7 +203,6 @@ as defined in the paper A Probabilistic Method for Inferring Preferences from Cl
 '''
 
 # %%
-
 def probabilistic_interleaving(list_a, list_b):
     ''' Probabilistic interleaving perfromed by throwing coins, if its heads we use the softmax function of list A
         to choose randomly (with higher probability the more relevant rankings)
@@ -196,7 +211,7 @@ def probabilistic_interleaving(list_a, list_b):
         We do this until the interleaved list is full.
         The interleaved list contains tuples with the document ID and a 0 or 1 considering the list that it came from.
         
-        @Input: 2 lists of intergers of length 3.
+        @Input: 2 lists of integers of length 3.
         
         @Output: an interleaved list of tuples of length 3. Each tuple contain an integer (document ID) and a 0 or 1 
         depending of which list it came from.
@@ -206,8 +221,8 @@ def probabilistic_interleaving(list_a, list_b):
     counter = 0
     
     while counter < 3:
-        coin_toss = random.random()
-                   
+        coin_toss = rd.random()
+
         if(coin_toss > 0.5):
             probs = softmax(list_a)
             chosen = np.random.choice(list_a, probs)
@@ -220,9 +235,8 @@ def probabilistic_interleaving(list_a, list_b):
             list_b.remove(chosen)
             list_a.remove(chosen)
             counter += 1
-
-    return interleaved_list
     
+    return interleaved_list
     
 def softmax(rankings, tau = 3):
     ''' Helper method that calculates the probabilities of every document in the given list
@@ -323,9 +337,9 @@ class ClickModel(object):
         raise NotImplementedError
     def get_probs(self, rankings):
         raise NotImplementedError
-    def is_click(self, rankings, epsilon):
+    def is_click(self, rankings, epsilon=0.1):
         """
-        simulate the click, return a boolean list of the same length as `rankings`, True means clicked
+            simulate the click, return a boolean list of the same length as `rankings`, True means clicked
         """
         probs = self.get_probs(rankings, epsilon)
         click_fn = lambda p: rd.uniform(0, 1) < p
@@ -470,14 +484,53 @@ class RCM(ClickModel):
 '''
 
 # %%
-def run_interleave_experiments(k):
-    for exp in interleave_experiments:
-        results = []a
-        for i in range(k):
-            click_results_E, click_results_P = get_click_results()
-            
-            if click_results_E > click_results_P:
-                results.append(click_results_E)
-                
-#                 ? What do to with these res
-    return
+# Import the appropriate data
+yd = YandexData('./YandexRelPredChallenge.txt')
+
+# Training the PBM and RCM model
+model_PBM = PBM()
+model_PBM.train(yd, 100, True)
+model_RCM = RCM()
+model_RCM.train(yd, True)
+
+# %%
+yd.queries_lookup['4']
+
+# %%
+for i, bin_val in calculate_Dmeasures(rankings).items():
+    for pair_idx in bin_val:
+        couple = rankings[pair_idx]
+        team_draft_interleaving(couple[0], couple[1])
+
+# %%
+def simulate_click(interleaved_ranking, model):
+    print(interleaved_ranking)
+
+# %%
+def simulate_experiment(rankingA, rankingB, model, interleave_fn=team_draft_interleaving, k=100):
+    E_wins = 0
+    P_wins = 0
+    
+    for i in range(k):
+        E_clicks = 0
+        P_clicks = 0
+        new_results_w_models = interleave_fn(rankingA, rankingB)
+        new_results_relevance = [i[0] for i in new_results_w_models]
+        ranker_clicked = [i[1] for i in new_results_w_models]
+        clicks = model.is_click(new_results_relevance, 0.1)
+
+        for index, click in enumerate(clicks):
+            if click:
+                if ranker_clicked[index] == 1:
+                    E_clicks += 1
+                else:
+                    P_clicks += 1
+        
+        if E_clicks > P_clicks:
+            E_wins += 1
+        elif P_clicks > E_clicks:
+            P_wins += 1
+    
+    return (E_wins + 1) / (E_wins + P_wins + 1)
+
+simulate_experiment(rankings[6][0], rankings[6][1], model_PBM)
