@@ -579,7 +579,6 @@ def calc_sample_size(p_val, alpha=0.05, beta=0.10, p_null=0.5):
 
     return ((z/(abs(p_val-p_null)))**2) + 1/abs(p_val-p_null)
 
-
 def calc_sample_size_for_bins(interleave_fn=team_draft_interleaving, model=model_PBM, rankings=rankings):
     bins = calculate_Dmeasures(rankings)
     bin_vals = list(bins.keys())
@@ -632,7 +631,8 @@ def run_all_setups(models=[model_PBM, model_RCM], methods=[team_draft_interleavi
             table_setup = calc_sample_size_for_bins(interleave_fn=method, model=model)
             # TODO: What should we do?
             print(table_setup)
-            table_setup.plot.bar()
+            plot_title = '{}_{}'.format(model.__class__.__name__, method.__name__)
+            table_setup.plot.bar(title=plot_title)
 
 # In[73]:
 
@@ -649,4 +649,3 @@ print(interleaved)
 
 # %%
 run_all_setups()
-
